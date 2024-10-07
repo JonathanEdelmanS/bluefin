@@ -1,19 +1,20 @@
-# Two phase nonisothermal Theis problem: Flow from single source.
-# Constant rate injection 2 kg/s of cold CO2 into warm reservoir
+# Two phase Theis problem: Flow from single source.
+# Constant rate injection 2 kg/s
 # 1D cylindrical mesh
 # Initially, system has only a liquid phase, until enough gas is injected
 # to form a gas phase, in which case the system becomes two phase.
+#
+# This test takes a few minutes to run, so is marked heavy
 
 [Mesh]
-  [mesh]
-    type = GeneratedMeshGenerator
-    dim = 1
-    nx = 200
-    xmin = 0.1
-    xmax = 200
-    bias_x = 1.05
+  type = GeneratedMesh
+  dim = 1
+  nx = 2000
+  xmax = 2000
+[]
 
-  []
+[Problem]
+  type = FEProblem
   coord_type = RZ
   rz_coord_axis = Y
 []
@@ -74,10 +75,6 @@
   [xnacl]
     initial_condition = 0.1
   []
-  [temperature]
-    initial_condition = 70
-    scaling = 1e-4
-  []
 []
 
 [Kernels]
@@ -111,24 +108,12 @@
     fluid_component = 2
     variable = xnacl
   []
-  [energy]
-    type = PorousFlowEnergyTimeDerivative
-    variable = temperature
-  []
-  [heatadv]
-    type = PorousFlowHeatAdvection
-    variable = temperature
-  []
-  [conduction]
-    type = PorousFlowHeatConduction
-    variable = temperature
-  []
 []
 
 [UserObjects]
   [dictator]
     type = PorousFlowDictator
-    porous_flow_vars = 'pgas zi xnacl temperature'
+    porous_flow_vars = 'pgas zi xnacl'
     number_fluid_phases = 2
     number_fluid_components = 3
   []
@@ -145,24 +130,44 @@
 []
 
 [FluidProperties]
+  [co2sw]
+    type = CO2SliderFluidProperties
+    real_coef=1.0
+  []
   [co2]
-    type = CO2FluidProperties
+    type = TabulatedFluidProperties
+    fp = co2sw
+    fluid_property_file = 'fluid_properties.csv'
+    allow_fp_and_tabulation = true
+    error_on_out_of_bounds = false
+  []
+  [water]
+    type = Water97FluidProperties
+  []
+  [watertab]
+    type = TabulatedFluidProperties
+    fp = water
+    temperature_min = 273.15
+    temperature_max = 573.15
+    fluid_property_output_file = water_fluid_properties.csv
+    # Comment out the fp parameter and uncomment below to use the newly generated tabulation
+    # fluid_property_file = water_fluid_properties.csv
   []
   [brine]
     type = BrineFluidProperties
+    water_fp = watertab
   []
 []
 
 [Materials]
   [temperature]
     type = PorousFlowTemperature
-    temperature = temperature
+    temperature = 20
   []
   [brineco2]
     type = PorousFlowFluidState
     gas_porepressure = pgas
     z = zi
-    temperature = temperature
     temperature_unit = Celsius
     xnacl = xnacl
     capillary_pressure = pc
@@ -188,41 +193,23 @@
     n = 2
     phase = 1
   []
-  [rockheat]
-    type = PorousFlowMatrixInternalEnergy
-    specific_heat_capacity = 1000
-    density = 2500
-  []
-  [rock_thermal_conductivity]
-    type = PorousFlowThermalConductivityIdeal
-    dry_thermal_conductivity = '50 0 0  0 50 0  0 0 50'
-  []
 []
 
 [BCs]
-  [cold_gas]
-    type = DirichletBC
-    boundary = left
-    variable = temperature
-    value = 20
-  []
-  [gas_injecton]
-    type = PorousFlowSink
-    boundary = left
-    variable = zi
-    flux_function = -0.159155
-  []
   [rightwater]
     type = DirichletBC
     boundary = right
     value = 20e6
     variable = pgas
   []
-  [righttemp]
-    type = DirichletBC
-    boundary = right
-    value = 70
-    variable = temperature
+[]
+
+[DiracKernels]
+  [source]
+    type = PorousFlowSquarePulsePointSource
+    point = '0 0 0'
+    mass_flux = 2
+    variable = zi
   []
 []
 
@@ -230,17 +217,13 @@
   [smp]
     type = SMP
     full = true
-    petsc_options_iname = '-ksp_type -pc_type -sub_pc_type -sub_pc_factor_shift_type -pc_asm_overlap'
-    petsc_options_value = 'gmres      asm      lu           NONZERO                   2'
   []
 []
 
 [Executioner]
   type = Transient
   solve_type = NEWTON
-  end_time = 1e3
-  nl_abs_tol = 1e-7
-  nl_rel_tol = 1e-5
+  end_time = 1e5
   [TimeStepper]
     type = IterationAdaptiveDT
     dt = 1
@@ -253,10 +236,10 @@
     type = LineValueSampler
     warn_discontinuous_face_values = false
     sort_by = x
-    start_point = '.1 0 0'
-    end_point = '200 0 0'
+    start_point = '0 0 0'
+    end_point = '2000 0 0'
     num_points = 10000
-    variable = 'pgas zi xnacl x1 saturation_gas temperature'
+    variable = 'pgas zi xnacl x1 saturation_gas'
     execute_on = 'timestep_end'
     use_interpolated_state=true
   []
@@ -265,23 +248,18 @@
 [Postprocessors]
   [pgas]
     type = PointValue
-    point = '2 0 0'
+    point = '4 0 0'
     variable = pgas
   []
   [sgas]
     type = PointValue
-    point = '2 0 0'
+    point = '4 0 0'
     variable = saturation_gas
   []
   [zi]
     type = PointValue
-    point = '2 0 0'
+    point = '4 0 0'
     variable = zi
-  []
-  [temperature]
-    type = PointValue
-    point = '2 0 0'
-    variable = temperature
   []
   [massgas]
     type = PorousFlowFluidMass
@@ -289,18 +267,27 @@
   []
   [x1]
     type = PointValue
-    point = '2 0 0'
+    point = '4 0 0'
     variable = x1
   []
   [y0]
     type = PointValue
-    point = '2 0 0'
+    point = '4 0 0'
     variable = y0
+  []
+  [xnacl]
+    type = PointValue
+    point = '4 0 0'
+    variable = xnacl
   []
 []
 
 [Outputs]
   print_linear_residuals = false
   perf_graph = true
-  csv = true
+  [csvout]
+    type = CSV
+    execute_on = timestep_end
+    execute_vector_postprocessors_on = timestep_end
+  []
 []

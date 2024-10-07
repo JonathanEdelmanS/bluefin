@@ -243,7 +243,7 @@
   nl_rel_tol = 1e-5
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 1
+    dt = .025
     growth_factor = 1
   []
 []

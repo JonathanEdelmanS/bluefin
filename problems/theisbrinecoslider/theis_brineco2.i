@@ -131,8 +131,7 @@
 
 [FluidProperties]
   [co2sw]
-    type = CO2SliderFluidProperties
-    real_coef = 1
+    type = CO2FluidProperties
   []
   [co2]
     type = TabulatedFluidProperties
@@ -227,7 +226,7 @@
   [TimeStepper]
     type = IterationAdaptiveDT
     dt = 1
-    growth_factor = 1.5
+    growth_factor = 1
   []
 []
 
@@ -241,6 +240,7 @@
     num_points = 10000
     variable = 'pgas zi xnacl x1 saturation_gas'
     execute_on = 'timestep_end'
+    use_interpolated_state=true
   []
 []
 
@@ -287,6 +287,6 @@
   [csvout]
     type = CSV
     execute_on = timestep_end
-    execute_vector_postprocessors_on = final
+    execute_vector_postprocessors_on = timestep_end
   []
 []

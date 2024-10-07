@@ -14,493 +14,251 @@ macro bind(def, element)
     end
 end
 
-# ╔═╡ 8885fb9e-652e-11ef-3130-ef5ff8ba7123
-using PlutoUI, DataFrames, CSV, Plots
+# ╔═╡ 35df67ca-7b6a-11ef-1fee-25fe0c894509
+using PlutoUI, Plots, DataFrames, CSV,  Plots.PlotMeasures 
 
-# ╔═╡ 21433727-12af-4819-b940-02c7fd5ea5b2
-using Plots.PlotMeasures 
+# ╔═╡ cec903b7-37b2-44f8-b106-521badf175af
 
-# ╔═╡ 2a3c3b23-e4b8-44b5-85c2-dc69090ba9ba
-T
 
-# ╔═╡ afe1df15-bfa3-4dde-bec7-f4eb378eb927
-@bind t Slider(1:50)
+# ╔═╡ e03ee2ad-0751-4c96-a046-2f0ae94a75d5
+begin
+	@bind t Slider(1:140)
+end
 
-# ╔═╡ 8dffd09e-089c-48db-a373-5aeae9eab7d1
+# ╔═╡ 93a12eec-cc10-4fee-ab4c-5676346cd649
 file=("000" * string(t))[end-3:end]
 
-# ╔═╡ d1dbe87f-dac7-4c24-9d34-27085a414af6
-begin
-	name = "real"
-	oneDepth = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame)
-	time = oneDepth.time[t+1]
-end
+# ╔═╡ fb5f533c-f276-484e-80ff-7dee22dffbd0
+onetime = CSV.read("../problems/Laforce/2D_SimpleFluid_csv_ptsuss_"*file*".csv", comment="#", DataFrame)
 
-# ╔═╡ 6c36672b-cbd8-46e6-a160-567393e898c9
-begin
-	plot()
-	for name in [ "ideal"]
-	onetime =  CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_0200.csv"
-	, comment="#", DataFrame)
-	ρ = onetime.density_gas[2:end]
-	p = onetime.pgas[2:end]
-	T = onetime.temperature[2:end] .+273.15
-	pρt = p./(ρ.*T)
-	r = onetime.x[2:end]
-	plot!(r, pρt, label=name)
-	scatter!(r, pρt, label=name)
-	end
-	plot!(xlabel="radius", ylabel = "p/(ρT)", title = "t = "*string(time) )
-end
 
-# ╔═╡ 3ab54724-e149-445c-abc2-0c81be298415
-CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_1600.csv", comment="#", DataFrame)
+# ╔═╡ 6fbc76e9-1114-4a50-9312-b61d53be5bd5
+timesSimple = CSV.read("../problems/Laforce/2D_SimpleFluid_csv.csv", comment="#", DataFrame).time[100]
 
-# ╔═╡ 25f564fe-a151-4a6a-aae5-520ed4edc2b1
-begin
-	let
-	plot()
-    for name in ["ideal", "real"]
-	onetime =  CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-	, comment="#", DataFrame)
-	saturation = onetime.saturation_gas[2:800]
-	r = onetime.x[2:end]
-	scatter!(r[1:799], saturation, title="t="*string(time), label=name)
-	end
-	plot!()
+# ╔═╡ 40a6041a-87fd-453a-b6aa-29a457738c82
+timesIdeal = CSV.read("../problems/Laforce/2D_IdealFluid_csv.csv", comment="#", DataFrame).time
 
-	end
-end
+# ╔═╡ 73f9c2e3-5ddf-4866-ac1d-7db45916b1c6
+timesSW = CSV.read("../problems/Laforce/2D_SW_csv.csv", comment="#", DataFrame)#.time
 
-# ╔═╡ 55509d35-5dc2-490c-8314-2b0a43ec2e24
-let
-	plot()
-    for name in ["ideal", "real"]
-	onetime =  CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-	, comment="#", DataFrame)
-	ρ = onetime.density_gas[2:end]
-	p = onetime.pgas[2:end]
-	T = onetime.temperature[2:end] .+ 273.15
-	pρt = p./(ρ.*T)
-	r = onetime.x[2:end]
-	scatter!(T, p, label=name)
-	plot!(xlabel="T", ylabel = "p", title = "t = "*string(time) )
-	end
-	plot!()
-end
+# ╔═╡ 8c1f1e43-03c0-4028-afae-37b4f18eb900
+timesSW[1:100] == timesIdeal[1:100]
 
-# ╔═╡ 1d71a5ea-3686-4d86-9627-d76b87d7aa18
-let
+# ╔═╡ cca25fe5-2231-44c5-96aa-23eaa9ceb5ed
+times = timesSW.time
 
-	let
-	plot()
-    for name in ["ideal", "real"]
-	onetime =  CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-	, comment="#", DataFrame)
-	T = onetime.temperature[2:end] .+ 273.15
-	r = onetime.x[2:end]
-	n=100
-	plot!(r[1:n],T[1:n], xlabel = "r", ylabel = "Temp", label = name)
-	scatter!(r[1:n],T[1:n], xlabel = "r", ylabel = "Temp", title=time, label = name)
-	print(name*":"*string(maximum(T))*" ")
-	end
-	plot!()
-end
-	
-end
+# ╔═╡ 72f49c93-3a6f-42ed-8fb3-c185a6b21552
+radii = onetime.x
 
-# ╔═╡ 9028045c-7762-4606-a5ca-84648080442a
-pρt
-
-# ╔═╡ 99e46cb6-9507-400f-ab20-00037a7d6e2c
-let
-	n=10000
-	names = "ideal"
-	plot(xlabel = "time", ylabel = "radius", yscale = :log10, right_margin = 10mm)
-	allgas=[]
-	times=[]
-	for t in 1:500
-		file=("000" * string(t))[end-3:end]
-	
-		curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame)
-		push!(allgas, curtime.pgas)
-		push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
-	end
-	(allgas)
-	times
-	radii = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame).x
-	allgas=hcat(allgas...)
-	heatmap!(times, radii[1:n], allgas[1:n,:], title = "Ideal Pressure")
-	#Δt = times[2:end]-times[1:(end-1)]
-	#scatter(times[1:(end-1)], Δt, xlabel = "t", ylabel = "Δt")
-end
-
-# ╔═╡ 0d5b3715-5abb-4841-8cb9-af5b38a3b2bb
-heatmap
-
-# ╔═╡ c6aca813-ed4a-4857-817c-24f4047f3ee5
-function propheatmap(names, prop, timesteps)
+# ╔═╡ 7a47f32c-1d2b-404c-a503-885ca5bea2f1
+function propheatmap(prop, timesteps; plotme=true)
 		
-		n=10000
 		plot(xlabel = "time", ylabel = "radius", yscale = :log10, right_margin = 10mm)
 		allgas=[]
-		times=[]
-	    name = names
+		radii=[]
 		for t in 1:timesteps
 			file=("000" * string(t))[end-3:end]
-			curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-			, comment="#", DataFrame)
+			curtime = CSV.read("../problems/Laforce/2D_SimpleFluid_csv_ptsuss_"*file*".csv", comment="#", DataFrame)
+			push!(radii, curtime.x)
 			push!(allgas, curtime[!, prop])
-			push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
+
 		end
 		(allgas)
-		times
-		radii = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_0001.csv"
-			, comment="#", DataFrame).x
-		allgas=hcat(allgas...)
-		heatmap!(times, radii[1:n], allgas[1:n,:], title = names * " " * prop)
 		
-		#return allgas
+		allgas=hcat(allgas...)
+		if !(plotme)
+			return times,radii,allgas
+		end
+		#heatmap!(times[2:timesteps+1], radii[:], allgas[:,:], title = names * " " * prop)
+		
+		return allgas
 		
 
-	#Δt = times[2:end]-times[1:(end-1)]
-	#scatter(times[1:(end-1)], Δt, xlabel = "t", ylabel = "Δt")
-	#minimum(Δt)
 end
 
-# ╔═╡ 311626f5-7628-4cef-97d6-e1b38a4cd3b9
-propheatmap("ideal", "pgas")
-
-# ╔═╡ d2894c9c-d6c6-48f1-91df-c3d31ff33ffd
-function prop(names, prop, timesteps)
+# ╔═╡ 32ad35d3-f1cc-4973-b1c1-d017753c6a6f
+function propheatmapSW(prop, timesteps; plotme=true)
 		
-		n=10000
 		plot(xlabel = "time", ylabel = "radius", yscale = :log10, right_margin = 10mm)
 		allgas=[]
-		times=[]
-	    name = names
+		radii=[]
 		for t in 1:timesteps
 			file=("000" * string(t))[end-3:end]
-			curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-			, comment="#", DataFrame)
+			curtime = CSV.read("../problems/Laforce/2D_SW_csv_ptsuss_"*file*".csv", comment="#", DataFrame)
+			push!(radii, curtime.x)
 			push!(allgas, curtime[!, prop])
-			push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
+
 		end
 		(allgas)
-		times
-		radii = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_0001.csv"
-			, comment="#", DataFrame).x
-		allgas=hcat(allgas...)
-		#heatmap!(times, radii[1:n], allgas[1:n,:], title = names * " " * prop)
 		
-		return times,radii,allgas
+		allgas=hcat(allgas...)
+		if !(plotme)
+			return times,radii,allgas
+		end
+		#heatmap!(times[2:timesteps+1], radii[:], allgas[:,:], title = names * " " * prop)
+		
+		return allgas
 		
 
-	#Δt = times[2:end]-times[1:(end-1)]
-	#scatter(times[1:(end-1)], Δt, xlabel = "t", ylabel = "Δt")
-	#minimum(Δt)
 end
 
-# ╔═╡ a3adae8a-478d-4b62-9319-78b03212e17a
-function Δtwitht(names, timesteps)
+# ╔═╡ fbd8d6db-11da-4f93-9f33-f8d2136ced5a
+function propheatmapIdeal(prop, timesteps; plotme=true)
 		
-		n=10000
 		plot(xlabel = "time", ylabel = "radius", yscale = :log10, right_margin = 10mm)
-		times=[]
-	    name = names
+		allgas=[]
+		radii=[]
 		for t in 1:timesteps
 			file=("000" * string(t))[end-3:end]
-			curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-			, comment="#", DataFrame)
-			push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
+			curtime = CSV.read("../problems/Laforce/2D_IdealFluid_csv_ptsuss_"*file*".csv", comment="#", DataFrame)
+			push!(radii, curtime.x)
+			push!(allgas, curtime[!, prop])
+
 		end
-		Δt = times[2:end]-times[1:(end-1)]
-		#return Δt
-		scatter(times[2:(end)], Δt, xlabel = "t", ylabel = "Δt", markersize=.1)
-	#minimum(Δt)
+		(allgas)
+		
+		allgas=hcat(allgas...)
+		if !(plotme)
+			return times,radii,allgas
+		end
+		#heatmap!(times[2:timesteps+1], radii[:], allgas[:,:], title = names * " " * prop)
+		
+		return allgas
+		
+
 end
 
-# ╔═╡ b8300189-8e18-4ffe-9c5d-895cde86a983
-Δtwitht("ideal")
-
-# ╔═╡ b2ec21a2-015b-444b-b5c9-daef0619bb3e
+# ╔═╡ f600417a-1177-4003-8d87-b2c1765565b7
 begin
-	propheatmap("unmodified", "pgas", 8000)
+	p = (propheatmapIdeal("pwater", 100))
+	T = (propheatmapIdeal("temp", 100))
+	sgas = (propheatmapIdeal("sgas", 100))
+	dispr = (propheatmapIdeal("disp_r", 100))
 end
 
-# ╔═╡ 3229c6a9-6f86-4a85-8127-ac0199c7ec70
+# ╔═╡ d7d5d9ee-c22b-4d49-a976-b29fc82aa9f2
 begin
-	n=170
-	times,radii,pressures = prop("unmodified", "pgas", n)	
-	timessmallerdt,radiismallerdt,pressuressmallerdt = prop("unmodifiedsmallerdt", "pgas", n*10)
+	stressrr = (propheatmapIdeal("stress_rr", 100))
+	stressrrSW = (propheatmapSW("stress_rr", 100))
+	dstressrr = (stressrrSW - stressrr)/maximum(abs.(stressrr))
+	
 end
 
-# ╔═╡ 1becd1c8-fa2f-40d3-8a78-9d9e1864571a
+# ╔═╡ 03272d35-6197-4186-8bff-454eaefee3ce
+stresstt = (propheatmap("stress_tt", 100))
 
+# ╔═╡ 489591e2-2537-4393-a95f-d2be9e514bea
+sgas
 
-# ╔═╡ cd46ad60-b341-4ad3-8038-d3f72eac895d
-heatmap(times, radii, pressures, yscale=:log10, cmap=:delta)
-
-# ╔═╡ a6f08f7a-5ede-430e-bcd0-f7c04ea7ff13
-heatmap(timessmallerdt, radiismallerdt, pressuressmallerdt, yscale=:log10, cmap=:delta, levels=3)
-
-# ╔═╡ 639094ab-da89-4fc3-bcb7-eefdd0a27eac
-let
-[propheatmap("unmodified", "pgas", 1800),propheatmap("unmodified", "temperature", 1800), propheatmap("unmodified", "zi", 1800), propheatmap("unmodified", "saturation_gas", 1800), ]
-end
-
-# ╔═╡ 9822ef32-a6ab-46c0-af7c-f82f35174f4e
+# ╔═╡ 3775567e-25c3-4156-bddf-fb62c6a3235c
 begin
-	@bind r Slider(1:10000)
+	psw = (propheatmapSW("pwater", 100))
+	Tsw = (propheatmapSW("temp", 100))
+	sgassw = (propheatmapSW("sgas", 100))
+	disprsw = (propheatmapSW("disp_r", 100))
 end
 
-# ╔═╡ 470e065c-287c-4555-8912-1276148f8434
-plot(r,p, xlabel = "r", ylabel = "pressure")
-
-# ╔═╡ d5290421-6c2f-413a-9f48-bf5ef668316a
-plot(r.^2 ./t,pρt )
-
-# ╔═╡ 9e1f3948-ef91-471e-92cb-ef78a817a94b
-@show r
-
-# ╔═╡ f39ad211-d0d0-4295-9cd2-d78314d69981
-begin
-	scatter(times, pressures[r,:], label = "dt=.25", markersize=3)
-	scatter!(timessmallerdt, pressuressmallerdt[r,:], label = "dt=.025", markersize=1)
-	
+# ╔═╡ 3d052d9f-dbbb-40f3-9f84-b2b9ebd852dc
+begin 
+	dp = (psw - p)/maximum(p)
+	dT = (Tsw - T)/maximum(T)
+	dsgas = (sgassw - sgas)/maximum(sgas)
+	ddisp = (disprsw - dispr)/maximum(abs.(dispr))
 end
 
-# ╔═╡ 7aad57ac-9fcc-443c-a613-95a08390bb68
-let
-	times,radii,pressures = prop("unmodifiedsmallerdt", "pgas", 1250)
-	scatter(times, pressures[20,:])
-end
+# ╔═╡ 743d62fb-ed2f-426b-9541-e375e6005ac5
 
-# ╔═╡ c0819460-d5bd-4501-b5a6-2ecdc0aa7179
-prop("unmodifiedsmallerdt", "pgas", 1000)[1]
 
-# ╔═╡ 4c2ee2c2-270c-4526-b0b4-badb38cbaed2
-prop
+# ╔═╡ 68716b90-2fdf-4b25-b444-97ebd814890e
+maximum(abs.(dispr))
 
-# ╔═╡ d4c97d2e-86e3-431b-9af9-d90a7eb33f03
-times
+# ╔═╡ 2605eb75-f8ce-430c-b1ef-0d37fcfbd324
+minimum(dispr)
 
-# ╔═╡ 3b6948d3-a836-4ab5-8c08-b7989877bd53
-Δtwitht("unmodified", 200)
+# ╔═╡ 394b8cb6-e2d9-4119-b845-6c619b475a9c
+maximum(dispr)
 
-# ╔═╡ 66573d2b-f02c-415c-8410-b460581f092b
-Δtwitht("slider_added")
+# ╔═╡ c01d0542-085a-445f-b596-6a8ad3f46763
+maximum(sgas)
 
-# ╔═╡ 16452895-b02a-4723-98df-90aea813b124
-propheatmap("unmodified", "pgas")
+# ╔═╡ ed1841c4-7986-41ca-a2d3-e6397bc3ae33
+heatmap(radii, times[2:101], stressrr', color=palette(:hot, 10), xscale=:log10, yscale=:log10, right_margin = 10mm)
 
-# ╔═╡ 0fd3a5ea-a74d-41ac-9a5d-f641e9730320
-propheatmap("unmodified", "temperature")
+# ╔═╡ c7235506-827f-4576-bc9e-a1e48680a905
+heatmap(radii, times[2:101], stressrrSW', color=palette(:hot, 10), xscale=:log10, yscale=:log10, right_margin = 10mm, xlabel="r", ylabel="t")
 
-# ╔═╡ 4b981f97-b4a6-4046-b84b-f2cfaaf07f66
-propheatmap("unmodified", "zi")
+# ╔═╡ fd87a147-1063-4a16-afbb-958de145b237
+heatmap(radii, times[2:101], dstressrr', color=palette(:hot, 10), xscale=:log10, yscale=:log10, right_margin = 10mm)
 
-# ╔═╡ e78ff007-b2f5-48a4-ab8a-34326e93ffcd
-[propheatmap("unmodified", "pgas"), propheatmap("slider_added", "pgas"),propheatmap("unmodified", "temperature"), propheatmap("slider_added", "temperature"),propheatmap("unmodified", "zi"), propheatmap("slider_added", "zi"), propheatmap("unmodified", "xnacl"), propheatmap("slider_added", "xnacl")]
+# ╔═╡ e4d395c2-9711-47b1-913b-e0087398397d
+heatmap(radii, times[1:100], ddisp', color=palette(:hot, 10), xscale=:log10, right_margin = 10mm)
 
-# ╔═╡ cbe3c089-55e9-4489-8497-61c4d33c4de4
-heatmap(propheatmap("unmodified", "zi") - propheatmap("slider_added", "zi"))
+# ╔═╡ 4ce780fe-f40e-409a-8025-58ae29bf865f
 
-# ╔═╡ 2cf65c09-cc28-4f62-9868-2efac69aa217
-propheatmap("unmodified", "pgas") - propheatmap("slider_added", "pgas")
 
-# ╔═╡ d59efe77-982f-40e4-97be-60e9daf51d8b
-heatmap((propheatmap("unmodified", "temperature") .- propheatmap("slider_added", "temperature") )./(propheatmap("unmodified", "temperature") ), yscale=:log10, right_margin=10mm)
+# ╔═╡ 1c1bdd7f-75db-469b-b34f-c893b25ae19f
+heatmap(radii, times[1:100], p', xscale=:log10)
 
-# ╔═╡ 0a85291a-5399-4846-ad69-c9631b8f8e4d
-let
-property = "pgas"
-heatmap((propheatmap("unmodified", property) .- propheatmap("slider_added", property) )./(propheatmap("unmodified", property) ), yscale=:log10, right_margin=10mm)
-end
+# ╔═╡ 4f012bd0-03ba-4e64-9fd8-a04d03a2e14c
+radii
 
-# ╔═╡ acf0db7a-5042-411f-97d3-f1c1af30676a
-let
-property = "zi"
-heatmap((propheatmap("unmodified", property) .- propheatmap("slider_added", property) ), yscale=:log10, right_margin=10mm, cmap=:redblue)
-end
+# ╔═╡ 261b38b0-b988-409f-af07-300e3a22f7b8
+Simples = [heatmap(radii, times[1:100], p, color=palette(:hot, 11)), heatmap(T, color=palette(:hot, 11)),
+heatmap(sgas, color=palette(:hot, 11)), heatmap(dispr, color=palette(:hot, 11))]
 
-# ╔═╡ 882b9565-c2bd-486f-bebc-07a18b95dc9c
-heatmap(propheatmap("unmodified", "zi"))
+# ╔═╡ 57e93baf-5021-43fc-af51-13c8f3f308e6
+SWs = [heatmap(psw, color=palette(:hot, 11)), heatmap(Tsw, color=palette(:hot, 11)),
+heatmap(sgassw, color=palette(:hot, 11)), heatmap(disprsw, color=palette(:hot, 11))]
 
-# ╔═╡ 587cfbcd-ffd4-49a9-8d90-6223531fd635
-heatmap(propheatmap("slider_added", "zi"))
+# ╔═╡ df344a5d-6c78-417c-873d-288f71d98ae7
+plot(Simples..., SWs..., layout = (2,4), yscale=:log10, link=:all)
 
-# ╔═╡ 5814d230-3840-434a-8a31-685a28cf9efe
-let
-property = "xnacl"
-heatmap((propheatmap("unmodified", property) .- propheatmap("slider_added", property) )./(propheatmap("unmodified", property) ), yscale=:log10)
-end
 
-# ╔═╡ 3594d396-aa59-4ec0-aef0-6e03955b6f66
-propheatmap("unmodified", "temperature") == propheatmap("slider_added", "temperature")
+# ╔═╡ b1d8714d-01e0-4f9d-8527-f6d45a6b04a9
+plot(heatmap(p, color=palette(:hot, 11)), heatmap(T, color=palette(:hot, 11)),
+heatmap(sgas, color=palette(:hot, 11)), heatmap(dispr, color=palette(:hot, 11)), 
+	heatmap(psw, color=palette(:hot, 11)), heatmap(Tsw, color=palette(:hot, 11)),
+heatmap(sgassw, color=palette(:hot, 11)), heatmap(disprsw, color=palette(:hot, 11)),
+	yscale=:log10)
 
-# ╔═╡ 2816eeb2-4944-417d-be26-00f124f8faf5
-propheatmap("unmodified", "xnacl") - propheatmap("slider_added", "xnacl")
+# ╔═╡ b9bc3487-8d0d-470a-a84d-a702bedac070
+heatmap(p-psw, yscale=:log10)
 
-# ╔═╡ efc7a395-7038-460d-a90a-f0deee6af89b
-let
-	n=10000
-	name = "ideal"
-	plot(xlabel = "time", ylabel = "radius", yscale = :log10, right_margin = 10mm)
-	allgas_ideal=[]
-	times=[]
-	for t in 1:532
-		file=("000" * string(t))[end-3:end]
-	
-		curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame)
-		push!(allgas_ideal, curtime.pgas)
-		push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
-	end
+# ╔═╡ 6ffd1f1c-09fe-49ae-aa9d-28de9aaa04d9
+scatter(p[50,:])
 
-	allgas_real=[]
-	name = "real"
-	times=[]
-	for t in 1:532
-		file=("000" * string(t))[end-3:end]
-	
-		curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame)
-		push!(allgas_real, curtime.pgas)
-		push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
-	end
+# ╔═╡ a1be030c-b7e1-4443-98e9-8948516eb752
+heatmap(T, yscale=:log10)
 
-	times
-	radii = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame).x
+# ╔═╡ 15c10b57-5bd6-4e99-8e8f-27ad5959f23d
+heatmap(Tsw, yscale=:log10)
 
-	allgas_ideal=hcat(allgas_ideal...)
+# ╔═╡ 7f1efe11-d2c6-4f2b-8075-226724471e2c
+heatmap(T-Tsw, yscale=:log10)
 
-	allgas_real=hcat(allgas_real...)
-	#heatmap!(times, radii[1:n], (allgas_real - allgas_ideal)[1:n,:], title = "Difference", cmap = :bluesreds)
-	P_ideal = allgas_ideal
-	P_SW = allgas_real
+# ╔═╡ 4e547ba5-1901-428d-a52e-6ae56dc99c42
+heatmap(sgas, yscale=:log10)
 
-	heatmap!(times, radii[1:n], (2(P_ideal.-P_SW)./(P_ideal.+P_SW.-40e6))[1:n,:], title = "Pressure Relative Diff", cmap = :bluesreds)
-end
+# ╔═╡ c7e1ed9d-4ee6-4a53-a854-3e0019183c50
+heatmap(sgas-sgassw, yscale=:log10)
 
-# ╔═╡ 2685c160-e37d-49d6-86e9-b4b612c77911
-let
-	n=50
-	names = "ideal"
-	plot(xlabel = "time", ylabel = "radius", right_margin = 10mm)
-	allgas=[]
-	times=[]
-	for t in 1:532
-		file=("000" * string(t))[end-3:end]
-	
-		curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame)
-		push!(allgas, curtime.temperature)
-		push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
-	end
-	(allgas)
-	times
-	radii = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame).x
-	allgas=hcat(allgas...)
-	heatmap!(times, radii[1:n], allgas[1:n,:], title = "Ideal Temperature")
-end
+# ╔═╡ 7c415303-f477-47be-8025-02514ac280cb
+heatmap(dispr, yscale=:log10)
 
-# ╔═╡ e7ef72cf-56f0-4b6f-b35f-818a706e5a57
-let
+# ╔═╡ 2cd869e4-d9c9-47f0-832c-8aad2637af2a
+heatmap(dispr-disprsw, yscale=:log10)
 
-	n=50
-	names = "real"
-	plot(xlabel = "time", ylabel = "radius", right_margin = 10mm)
-	allgas=[]
-	times=[]
-	for t in 1:532
-		file=("000" * string(t))[end-3:end]
-	
-		curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame)
-		push!(allgas, curtime.temperature)
-		push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
-	end
-	(allgas)
-	times
-	radii = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame).x
-	allgas=hcat(allgas...)
-	heatmap!(times, radii[1:n], allgas[1:n,:], title = "SW Temperature")
-end
+# ╔═╡ e3c37df0-638a-4ea1-aa97-7b735326d6dd
+heatmap(p./T, yscale=:log10)
 
-# ╔═╡ 9998603f-785b-4ec1-9ed9-fd86f1b9941f
-let
+# ╔═╡ ada25b50-295b-416c-9fc8-9faf73b11a35
+heatmap(propheatmapSW("pgas", 100), yscale=:log10, color=palette(:hot, 11))
 
-	n=1000
-	names = "real"
-	plot(xlabel = "time", ylabel = "radius", right_margin = 10mm)
-	allgas=[]
-	times=[]
-	for t in 1:532
-		file=("000" * string(t))[end-3:end]
-	
-		curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame)
-		push!(allgas, curtime.saturation_gas)
-		push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
-	end
-	(allgas)
-	times
-	radii = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame).x
-	allgas=hcat(allgas...)
-	heatmap!(times, radii[1:n], allgas[1:n,:], title = "SW gas saturation", yscale=:log10)
-	#plot(times, allgas[3,:], xlabel = "time", ylabel = "gas saturation")
-	times
-end
+# ╔═╡ 923200b6-6d06-43a8-ba06-d75bb04ba193
+propheatmapSW("pgas", 100)
 
-# ╔═╡ 815aa00f-49c7-4ad1-b904-fd5b5af7f073
-let
-	n=10000
-	name = "ideal"
-	plot(xlabel = "time", ylabel = "radius", right_margin = 10mm, yscale=:log10)
-	allgas_ideal=[]
-	times=[]
-	for t in 1:532
-		file=("000" * string(t))[end-3:end]
-	
-		curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame)
-		push!(allgas_ideal, curtime.temperature)
-		push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
-	end
-
-	allgas_real=[]
-	name = "real"
-	times=[]
-	for t in 1:532
-		file=("000" * string(t))[end-3:end]
-	
-		curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame)
-		push!(allgas_real, curtime.temperature)
-		push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
-	end
-
-	times
-	radii = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame).x
-
-	allgas_ideal=hcat(allgas_ideal...)
-
-	allgas_real=hcat(allgas_real...)
-	#heatmap!(times, radii[1:n], (allgas_real - allgas_ideal)[1:n,:], title = "Difference", cmap = :heat)
-
-	T_ideal = allgas_ideal
-	T_SW = allgas_real
-
-	heatmap!(times, radii[1:n], (2(T_ideal.-T_SW)./(T_ideal.+T_SW))[1:n,:], title = "Temperature Relative Diff", cmap = :bluesreds)
-end
+# ╔═╡ 499a0458-a592-474a-a593-ecdcdb641919
+propheatmapSW("pwater", 100)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -512,8 +270,8 @@ PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
 [compat]
 CSV = "~0.10.14"
-DataFrames = "~1.6.1"
-Plots = "~1.40.5"
+DataFrames = "~1.7.0"
+Plots = "~1.40.8"
 PlutoUI = "~0.7.60"
 """
 
@@ -523,7 +281,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.3"
 manifest_format = "2.0"
-project_hash = "c3ef20a4e106ba45006ced82a4bfa963eb85e833"
+project_hash = "d73fbdc9f9f914c8f07e379a47eb9aedc3f6e53d"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -637,10 +395,10 @@ uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 version = "1.16.0"
 
 [[deps.DataFrames]]
-deps = ["Compat", "DataAPI", "DataStructures", "Future", "InlineStrings", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrecompileTools", "PrettyTables", "Printf", "REPL", "Random", "Reexport", "SentinelArrays", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
-git-tree-sha1 = "04c738083f29f86e62c8afc341f0967d8717bdb8"
+deps = ["Compat", "DataAPI", "DataStructures", "Future", "InlineStrings", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrecompileTools", "PrettyTables", "Printf", "Random", "Reexport", "SentinelArrays", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
+git-tree-sha1 = "fb61b4812c49343d7ef0b533ba982c46021938a6"
 uuid = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-version = "1.6.1"
+version = "1.7.0"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
@@ -700,9 +458,9 @@ version = "2.6.2+0"
 
 [[deps.FFMPEG]]
 deps = ["FFMPEG_jll"]
-git-tree-sha1 = "b57e3acbe22f8484b4b5ff66a7499717fe1a9cc8"
+git-tree-sha1 = "53ebe7511fa11d33bec688a9178fac4e49eeee00"
 uuid = "c87230d0-a227-11e9-1b43-d7ebe4e7570a"
-version = "0.4.1"
+version = "0.4.2"
 
 [[deps.FFMPEG_jll]]
 deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "JLLWrappers", "LAME_jll", "Libdl", "Ogg_jll", "OpenSSL_jll", "Opus_jll", "PCRE2_jll", "Zlib_jll", "libaom_jll", "libass_jll", "libfdk_aac_jll", "libvorbis_jll", "x264_jll", "x265_jll"]
@@ -711,10 +469,15 @@ uuid = "b22a6f82-2f65-5046-a5b2-351ab43fb4e5"
 version = "4.4.4+1"
 
 [[deps.FilePathsBase]]
-deps = ["Compat", "Dates", "Mmap", "Printf", "Test", "UUIDs"]
-git-tree-sha1 = "9f00e42f8d99fdde64d40c8ea5d14269a2e2c1aa"
+deps = ["Compat", "Dates"]
+git-tree-sha1 = "7878ff7172a8e6beedd1dea14bd27c3c6340d361"
 uuid = "48062228-2e41-5def-b9a4-89aafe57970f"
-version = "0.9.21"
+version = "0.9.22"
+weakdeps = ["Mmap", "Test"]
+
+    [deps.FilePathsBase.extensions]
+    FilePathsBaseMmapExt = "Mmap"
+    FilePathsBaseTestExt = "Test"
 
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
@@ -863,9 +626,9 @@ version = "0.1.8"
 
 [[deps.JLLWrappers]]
 deps = ["Artifacts", "Preferences"]
-git-tree-sha1 = "7e5d6779a1e09a36db2a7b6cff50942a0a7d0fca"
+git-tree-sha1 = "f389674c99bfcde17dc57454011aa44d5a260a40"
 uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
-version = "1.5.0"
+version = "1.6.0"
 
 [[deps.JSON]]
 deps = ["Dates", "Mmap", "Parsers", "Unicode"]
@@ -893,15 +656,15 @@ version = "3.0.0+1"
 
 [[deps.LLVMOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "e16271d212accd09d52ee0ae98956b8a05c4b626"
+git-tree-sha1 = "78211fb6cbc872f77cad3fc0b6cf647d923f4929"
 uuid = "1d63c593-3942-5779-bab2-d838dc0a180e"
-version = "17.0.6+0"
+version = "18.1.7+0"
 
 [[deps.LZO_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "70c5da094887fd2cae843b8db33920bac4b6f07d"
+git-tree-sha1 = "854a9c268c43b77b0a27f22d7fab8d33cdb3a731"
 uuid = "dd4b983a-f0e5-5f8d-a1b7-129d4a5fb1ac"
-version = "2.10.2+0"
+version = "2.10.2+1"
 
 [[deps.LaTeXStrings]]
 git-tree-sha1 = "50901ebc375ed41dbf8058da26f9de442febbbec"
@@ -1106,9 +869,9 @@ version = "1.4.3"
 
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "a028ee3cb5641cccc4c24e90c36b0a4f7707bdf5"
+git-tree-sha1 = "7493f61f55a6cce7325f197443aa80d32554ba10"
 uuid = "458c3c95-2e84-50aa-8efc-19380b2a3a95"
-version = "3.0.14+0"
+version = "3.0.15+1"
 
 [[deps.Opus_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1168,9 +931,9 @@ version = "1.4.1"
 
 [[deps.Plots]]
 deps = ["Base64", "Contour", "Dates", "Downloads", "FFMPEG", "FixedPointNumbers", "GR", "JLFzf", "JSON", "LaTeXStrings", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "Pkg", "PlotThemes", "PlotUtils", "PrecompileTools", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "RelocatableFolders", "Requires", "Scratch", "Showoff", "SparseArrays", "Statistics", "StatsBase", "TOML", "UUIDs", "UnicodeFun", "UnitfulLatexify", "Unzip"]
-git-tree-sha1 = "082f0c4b70c202c37784ce4bfbc33c9f437685bf"
+git-tree-sha1 = "45470145863035bb124ca51b320ed35d071cc6c2"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.40.5"
+version = "1.40.8"
 
     [deps.Plots.extensions]
     FileIOExt = "FileIO"
@@ -1212,9 +975,9 @@ version = "1.4.3"
 
 [[deps.PrettyTables]]
 deps = ["Crayons", "LaTeXStrings", "Markdown", "PrecompileTools", "Printf", "Reexport", "StringManipulation", "Tables"]
-git-tree-sha1 = "66b20dd35966a748321d3b2537c4584cf40387c7"
+git-tree-sha1 = "1101cd475833706e4d0e7b122218257178f48f34"
 uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
-version = "2.3.2"
+version = "2.4.0"
 
 [[deps.Printf]]
 deps = ["Unicode"]
@@ -1307,9 +1070,9 @@ uuid = "992d4aef-0814-514b-bc4d-f2e9a6c4116f"
 version = "1.0.3"
 
 [[deps.SimpleBufferStream]]
-git-tree-sha1 = "874e8867b33a00e784c8a7e4b60afe9e037b74e1"
+git-tree-sha1 = "f305871d2f381d21527c770d4788c06c097c9bc1"
 uuid = "777ac1f9-54b0-4bf8-805c-2214025038e7"
-version = "1.1.0"
+version = "1.2.0"
 
 [[deps.Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
@@ -1344,9 +1107,9 @@ version = "0.34.3"
 
 [[deps.StringManipulation]]
 deps = ["PrecompileTools"]
-git-tree-sha1 = "a04cabe79c5f01f4d723cc6704070ada0b9d46d5"
+git-tree-sha1 = "a6b1675a536c5ad1a60e5a5153e1fee12eb146e3"
 uuid = "892a3eda-7b42-436c-8928-eab12a02cf0e"
-version = "0.3.4"
+version = "0.4.0"
 
 [[deps.SuiteSparse_jll]]
 deps = ["Artifacts", "Libdl", "libblastrampoline_jll"]
@@ -1747,60 +1510,54 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╠═8885fb9e-652e-11ef-3130-ef5ff8ba7123
-# ╠═8dffd09e-089c-48db-a373-5aeae9eab7d1
-# ╠═d1dbe87f-dac7-4c24-9d34-27085a414af6
-# ╠═6c36672b-cbd8-46e6-a160-567393e898c9
-# ╠═3ab54724-e149-445c-abc2-0c81be298415
-# ╠═25f564fe-a151-4a6a-aae5-520ed4edc2b1
-# ╠═470e065c-287c-4555-8912-1276148f8434
-# ╠═55509d35-5dc2-490c-8314-2b0a43ec2e24
-# ╠═2a3c3b23-e4b8-44b5-85c2-dc69090ba9ba
-# ╠═afe1df15-bfa3-4dde-bec7-f4eb378eb927
-# ╠═1d71a5ea-3686-4d86-9627-d76b87d7aa18
-# ╠═9028045c-7762-4606-a5ca-84648080442a
-# ╠═d5290421-6c2f-413a-9f48-bf5ef668316a
-# ╠═21433727-12af-4819-b940-02c7fd5ea5b2
-# ╠═99e46cb6-9507-400f-ab20-00037a7d6e2c
-# ╠═b8300189-8e18-4ffe-9c5d-895cde86a983
-# ╠═311626f5-7628-4cef-97d6-e1b38a4cd3b9
-# ╠═0d5b3715-5abb-4841-8cb9-af5b38a3b2bb
-# ╠═c6aca813-ed4a-4857-817c-24f4047f3ee5
-# ╠═d2894c9c-d6c6-48f1-91df-c3d31ff33ffd
-# ╠═a3adae8a-478d-4b62-9319-78b03212e17a
-# ╠═b2ec21a2-015b-444b-b5c9-daef0619bb3e
-# ╠═3229c6a9-6f86-4a85-8127-ac0199c7ec70
-# ╠═1becd1c8-fa2f-40d3-8a78-9d9e1864571a
-# ╠═cd46ad60-b341-4ad3-8038-d3f72eac895d
-# ╠═a6f08f7a-5ede-430e-bcd0-f7c04ea7ff13
-# ╠═639094ab-da89-4fc3-bcb7-eefdd0a27eac
-# ╠═9822ef32-a6ab-46c0-af7c-f82f35174f4e
-# ╠═9e1f3948-ef91-471e-92cb-ef78a817a94b
-# ╠═f39ad211-d0d0-4295-9cd2-d78314d69981
-# ╠═7aad57ac-9fcc-443c-a613-95a08390bb68
-# ╠═c0819460-d5bd-4501-b5a6-2ecdc0aa7179
-# ╠═4c2ee2c2-270c-4526-b0b4-badb38cbaed2
-# ╠═d4c97d2e-86e3-431b-9af9-d90a7eb33f03
-# ╠═3b6948d3-a836-4ab5-8c08-b7989877bd53
-# ╠═66573d2b-f02c-415c-8410-b460581f092b
-# ╠═16452895-b02a-4723-98df-90aea813b124
-# ╠═0fd3a5ea-a74d-41ac-9a5d-f641e9730320
-# ╠═4b981f97-b4a6-4046-b84b-f2cfaaf07f66
-# ╠═e78ff007-b2f5-48a4-ab8a-34326e93ffcd
-# ╠═cbe3c089-55e9-4489-8497-61c4d33c4de4
-# ╠═2cf65c09-cc28-4f62-9868-2efac69aa217
-# ╠═d59efe77-982f-40e4-97be-60e9daf51d8b
-# ╠═0a85291a-5399-4846-ad69-c9631b8f8e4d
-# ╠═acf0db7a-5042-411f-97d3-f1c1af30676a
-# ╠═882b9565-c2bd-486f-bebc-07a18b95dc9c
-# ╠═587cfbcd-ffd4-49a9-8d90-6223531fd635
-# ╠═5814d230-3840-434a-8a31-685a28cf9efe
-# ╠═3594d396-aa59-4ec0-aef0-6e03955b6f66
-# ╠═2816eeb2-4944-417d-be26-00f124f8faf5
-# ╠═efc7a395-7038-460d-a90a-f0deee6af89b
-# ╠═2685c160-e37d-49d6-86e9-b4b612c77911
-# ╠═e7ef72cf-56f0-4b6f-b35f-818a706e5a57
-# ╠═9998603f-785b-4ec1-9ed9-fd86f1b9941f
-# ╠═815aa00f-49c7-4ad1-b904-fd5b5af7f073
+# ╠═35df67ca-7b6a-11ef-1fee-25fe0c894509
+# ╠═cec903b7-37b2-44f8-b106-521badf175af
+# ╠═e03ee2ad-0751-4c96-a046-2f0ae94a75d5
+# ╠═93a12eec-cc10-4fee-ab4c-5676346cd649
+# ╠═fb5f533c-f276-484e-80ff-7dee22dffbd0
+# ╠═6fbc76e9-1114-4a50-9312-b61d53be5bd5
+# ╠═40a6041a-87fd-453a-b6aa-29a457738c82
+# ╠═73f9c2e3-5ddf-4866-ac1d-7db45916b1c6
+# ╠═8c1f1e43-03c0-4028-afae-37b4f18eb900
+# ╠═cca25fe5-2231-44c5-96aa-23eaa9ceb5ed
+# ╠═72f49c93-3a6f-42ed-8fb3-c185a6b21552
+# ╠═7a47f32c-1d2b-404c-a503-885ca5bea2f1
+# ╠═32ad35d3-f1cc-4973-b1c1-d017753c6a6f
+# ╠═fbd8d6db-11da-4f93-9f33-f8d2136ced5a
+# ╠═f600417a-1177-4003-8d87-b2c1765565b7
+# ╠═d7d5d9ee-c22b-4d49-a976-b29fc82aa9f2
+# ╠═03272d35-6197-4186-8bff-454eaefee3ce
+# ╠═489591e2-2537-4393-a95f-d2be9e514bea
+# ╠═3775567e-25c3-4156-bddf-fb62c6a3235c
+# ╠═3d052d9f-dbbb-40f3-9f84-b2b9ebd852dc
+# ╠═743d62fb-ed2f-426b-9541-e375e6005ac5
+# ╠═68716b90-2fdf-4b25-b444-97ebd814890e
+# ╠═2605eb75-f8ce-430c-b1ef-0d37fcfbd324
+# ╠═394b8cb6-e2d9-4119-b845-6c619b475a9c
+# ╠═c01d0542-085a-445f-b596-6a8ad3f46763
+# ╠═ed1841c4-7986-41ca-a2d3-e6397bc3ae33
+# ╠═c7235506-827f-4576-bc9e-a1e48680a905
+# ╠═fd87a147-1063-4a16-afbb-958de145b237
+# ╠═e4d395c2-9711-47b1-913b-e0087398397d
+# ╠═4ce780fe-f40e-409a-8025-58ae29bf865f
+# ╠═1c1bdd7f-75db-469b-b34f-c893b25ae19f
+# ╠═4f012bd0-03ba-4e64-9fd8-a04d03a2e14c
+# ╠═261b38b0-b988-409f-af07-300e3a22f7b8
+# ╠═57e93baf-5021-43fc-af51-13c8f3f308e6
+# ╠═df344a5d-6c78-417c-873d-288f71d98ae7
+# ╠═b1d8714d-01e0-4f9d-8527-f6d45a6b04a9
+# ╠═b9bc3487-8d0d-470a-a84d-a702bedac070
+# ╠═6ffd1f1c-09fe-49ae-aa9d-28de9aaa04d9
+# ╠═a1be030c-b7e1-4443-98e9-8948516eb752
+# ╠═15c10b57-5bd6-4e99-8e8f-27ad5959f23d
+# ╠═7f1efe11-d2c6-4f2b-8075-226724471e2c
+# ╠═4e547ba5-1901-428d-a52e-6ae56dc99c42
+# ╠═c7e1ed9d-4ee6-4a53-a854-3e0019183c50
+# ╠═7c415303-f477-47be-8025-02514ac280cb
+# ╠═2cd869e4-d9c9-47f0-832c-8aad2637af2a
+# ╠═e3c37df0-638a-4ea1-aa97-7b735326d6dd
+# ╠═ada25b50-295b-416c-9fc8-9faf73b11a35
+# ╠═923200b6-6d06-43a8-ba06-d75bb04ba193
+# ╠═499a0458-a592-474a-a593-ecdcdb641919
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

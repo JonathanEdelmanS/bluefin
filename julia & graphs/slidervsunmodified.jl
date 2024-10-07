@@ -4,144 +4,11 @@
 using Markdown
 using InteractiveUtils
 
-# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
-macro bind(def, element)
-    quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
-        local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
-        el
-    end
-end
+# ╔═╡ 4a4ff316-7050-11ef-0242-d3b96087b959
+using PlutoUI, DataFrames, CSV, Plots, Plots.PlotMeasures 
 
-# ╔═╡ 8885fb9e-652e-11ef-3130-ef5ff8ba7123
-using PlutoUI, DataFrames, CSV, Plots
-
-# ╔═╡ 21433727-12af-4819-b940-02c7fd5ea5b2
-using Plots.PlotMeasures 
-
-# ╔═╡ 2a3c3b23-e4b8-44b5-85c2-dc69090ba9ba
-T
-
-# ╔═╡ afe1df15-bfa3-4dde-bec7-f4eb378eb927
-@bind t Slider(1:50)
-
-# ╔═╡ 8dffd09e-089c-48db-a373-5aeae9eab7d1
-file=("000" * string(t))[end-3:end]
-
-# ╔═╡ d1dbe87f-dac7-4c24-9d34-27085a414af6
-begin
-	name = "real"
-	oneDepth = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame)
-	time = oneDepth.time[t+1]
-end
-
-# ╔═╡ 6c36672b-cbd8-46e6-a160-567393e898c9
-begin
-	plot()
-	for name in [ "ideal"]
-	onetime =  CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_0200.csv"
-	, comment="#", DataFrame)
-	ρ = onetime.density_gas[2:end]
-	p = onetime.pgas[2:end]
-	T = onetime.temperature[2:end] .+273.15
-	pρt = p./(ρ.*T)
-	r = onetime.x[2:end]
-	plot!(r, pρt, label=name)
-	scatter!(r, pρt, label=name)
-	end
-	plot!(xlabel="radius", ylabel = "p/(ρT)", title = "t = "*string(time) )
-end
-
-# ╔═╡ 3ab54724-e149-445c-abc2-0c81be298415
-CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_1600.csv", comment="#", DataFrame)
-
-# ╔═╡ 25f564fe-a151-4a6a-aae5-520ed4edc2b1
-begin
-	let
-	plot()
-    for name in ["ideal", "real"]
-	onetime =  CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-	, comment="#", DataFrame)
-	saturation = onetime.saturation_gas[2:800]
-	r = onetime.x[2:end]
-	scatter!(r[1:799], saturation, title="t="*string(time), label=name)
-	end
-	plot!()
-
-	end
-end
-
-# ╔═╡ 55509d35-5dc2-490c-8314-2b0a43ec2e24
-let
-	plot()
-    for name in ["ideal", "real"]
-	onetime =  CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-	, comment="#", DataFrame)
-	ρ = onetime.density_gas[2:end]
-	p = onetime.pgas[2:end]
-	T = onetime.temperature[2:end] .+ 273.15
-	pρt = p./(ρ.*T)
-	r = onetime.x[2:end]
-	scatter!(T, p, label=name)
-	plot!(xlabel="T", ylabel = "p", title = "t = "*string(time) )
-	end
-	plot!()
-end
-
-# ╔═╡ 1d71a5ea-3686-4d86-9627-d76b87d7aa18
-let
-
-	let
-	plot()
-    for name in ["ideal", "real"]
-	onetime =  CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-	, comment="#", DataFrame)
-	T = onetime.temperature[2:end] .+ 273.15
-	r = onetime.x[2:end]
-	n=100
-	plot!(r[1:n],T[1:n], xlabel = "r", ylabel = "Temp", label = name)
-	scatter!(r[1:n],T[1:n], xlabel = "r", ylabel = "Temp", title=time, label = name)
-	print(name*":"*string(maximum(T))*" ")
-	end
-	plot!()
-end
-	
-end
-
-# ╔═╡ 9028045c-7762-4606-a5ca-84648080442a
-pρt
-
-# ╔═╡ 99e46cb6-9507-400f-ab20-00037a7d6e2c
-let
-	n=10000
-	names = "ideal"
-	plot(xlabel = "time", ylabel = "radius", yscale = :log10, right_margin = 10mm)
-	allgas=[]
-	times=[]
-	for t in 1:500
-		file=("000" * string(t))[end-3:end]
-	
-		curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame)
-		push!(allgas, curtime.pgas)
-		push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
-	end
-	(allgas)
-	times
-	radii = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame).x
-	allgas=hcat(allgas...)
-	heatmap!(times, radii[1:n], allgas[1:n,:], title = "Ideal Pressure")
-	#Δt = times[2:end]-times[1:(end-1)]
-	#scatter(times[1:(end-1)], Δt, xlabel = "t", ylabel = "Δt")
-end
-
-# ╔═╡ 0d5b3715-5abb-4841-8cb9-af5b38a3b2bb
-heatmap
-
-# ╔═╡ c6aca813-ed4a-4857-817c-24f4047f3ee5
-function propheatmap(names, prop, timesteps)
+# ╔═╡ 67ab3b57-d810-4ff4-aef1-10c4746cdf3f
+function propheatmap(names, prop, timesteps; plotme=true)
 		
 		n=10000
 		plot(xlabel = "time", ylabel = "radius", yscale = :log10, right_margin = 10mm)
@@ -152,6 +19,7 @@ function propheatmap(names, prop, timesteps)
 			file=("000" * string(t))[end-3:end]
 			curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
 			, comment="#", DataFrame)
+
 			push!(allgas, curtime[!, prop])
 			push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
 		end
@@ -160,6 +28,9 @@ function propheatmap(names, prop, timesteps)
 		radii = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_0001.csv"
 			, comment="#", DataFrame).x
 		allgas=hcat(allgas...)
+		if !(plotme)
+			return times,radii,allgas
+		end
 		heatmap!(times, radii[1:n], allgas[1:n,:], title = names * " " * prop)
 		
 		#return allgas
@@ -170,11 +41,8 @@ function propheatmap(names, prop, timesteps)
 	#minimum(Δt)
 end
 
-# ╔═╡ 311626f5-7628-4cef-97d6-e1b38a4cd3b9
-propheatmap("ideal", "pgas")
-
-# ╔═╡ d2894c9c-d6c6-48f1-91df-c3d31ff33ffd
-function prop(names, prop, timesteps)
+# ╔═╡ d32ae4a8-fe00-4945-9429-96c6b8b9dbfa
+function propheatmapiso(names, prop, timesteps; plotme=true)
 		
 		n=10000
 		plot(xlabel = "time", ylabel = "radius", yscale = :log10, right_margin = 10mm)
@@ -183,19 +51,23 @@ function prop(names, prop, timesteps)
 	    name = names
 		for t in 1:timesteps
 			file=("000" * string(t))[end-3:end]
-			curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
+			curtime = CSV.read("../problems/theisbrinecoslider/theis_brineco2"*name*"csvout_line_"*file*".csv"
 			, comment="#", DataFrame)
+
 			push!(allgas, curtime[!, prop])
-			push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
+			push!(times, CSV.read("../problems/theisbrinecoslider/theis_brineco2"*name*"csvout.csv", comment="#", DataFrame).time[t+1])
 		end
 		(allgas)
 		times
-		radii = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_0001.csv"
+		radii = CSV.read("../problems/theisbrinecoslider/theis_brineco2"*name*"csvout_line_0001.csv"
 			, comment="#", DataFrame).x
 		allgas=hcat(allgas...)
-		#heatmap!(times, radii[1:n], allgas[1:n,:], title = names * " " * prop)
+		if !(plotme)
+			return times,radii,allgas
+		end
+		heatmap!(times, radii[1:n], allgas[1:n,:], title = names * " " * prop)
 		
-		return times,radii,allgas
+		#return allgas
 		
 
 	#Δt = times[2:end]-times[1:(end-1)]
@@ -203,303 +75,47 @@ function prop(names, prop, timesteps)
 	#minimum(Δt)
 end
 
-# ╔═╡ a3adae8a-478d-4b62-9319-78b03212e17a
-function Δtwitht(names, timesteps)
-		
-		n=10000
-		plot(xlabel = "time", ylabel = "radius", yscale = :log10, right_margin = 10mm)
-		times=[]
-	    name = names
-		for t in 1:timesteps
-			file=("000" * string(t))[end-3:end]
-			curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-			, comment="#", DataFrame)
-			push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
-		end
-		Δt = times[2:end]-times[1:(end-1)]
-		#return Δt
-		scatter(times[2:(end)], Δt, xlabel = "t", ylabel = "Δt", markersize=.1)
-	#minimum(Δt)
-end
+# ╔═╡ f2b984db-5902-4263-a103-9f04cbd91855
+propheatmap("unmodified", "temperature", 350)
 
-# ╔═╡ b8300189-8e18-4ffe-9c5d-895cde86a983
-Δtwitht("ideal")
+# ╔═╡ f7208e37-52b0-4ca8-803e-174712b8db4a
+propheatmap("slider1", "pgas", 100)
 
-# ╔═╡ b2ec21a2-015b-444b-b5c9-daef0619bb3e
+# ╔═╡ af5c6cb1-abba-4b8d-a38d-b66fca70783f
 begin
-	propheatmap("unmodified", "pgas", 8000)
+	t,r,unmod=propheatmap("unmodified", "temperature", 35; plotme=false)
+	_,_,slid=propheatmap("slider1", "temperature", 35; plotme=false)
 end
 
-# ╔═╡ 3229c6a9-6f86-4a85-8127-ac0199c7ec70
+# ╔═╡ 073fa2ba-9d24-40cc-9336-239261584385
 begin
-	n=170
-	times,radii,pressures = prop("unmodified", "pgas", n)	
-	timessmallerdt,radiismallerdt,pressuressmallerdt = prop("unmodifiedsmallerdt", "pgas", n*10)
-end
-
-# ╔═╡ 1becd1c8-fa2f-40d3-8a78-9d9e1864571a
-
-
-# ╔═╡ cd46ad60-b341-4ad3-8038-d3f72eac895d
-heatmap(times, radii, pressures, yscale=:log10, cmap=:delta)
-
-# ╔═╡ a6f08f7a-5ede-430e-bcd0-f7c04ea7ff13
-heatmap(timessmallerdt, radiismallerdt, pressuressmallerdt, yscale=:log10, cmap=:delta, levels=3)
-
-# ╔═╡ 639094ab-da89-4fc3-bcb7-eefdd0a27eac
-let
-[propheatmap("unmodified", "pgas", 1800),propheatmap("unmodified", "temperature", 1800), propheatmap("unmodified", "zi", 1800), propheatmap("unmodified", "saturation_gas", 1800), ]
-end
-
-# ╔═╡ 9822ef32-a6ab-46c0-af7c-f82f35174f4e
-begin
-	@bind r Slider(1:10000)
-end
-
-# ╔═╡ 470e065c-287c-4555-8912-1276148f8434
-plot(r,p, xlabel = "r", ylabel = "pressure")
-
-# ╔═╡ d5290421-6c2f-413a-9f48-bf5ef668316a
-plot(r.^2 ./t,pρt )
-
-# ╔═╡ 9e1f3948-ef91-471e-92cb-ef78a817a94b
-@show r
-
-# ╔═╡ f39ad211-d0d0-4295-9cd2-d78314d69981
-begin
-	scatter(times, pressures[r,:], label = "dt=.25", markersize=3)
-	scatter!(timessmallerdt, pressuressmallerdt[r,:], label = "dt=.025", markersize=1)
 	
+	heatmap(t,r,unmod-slid, yscale=:log10)
 end
 
-# ╔═╡ 7aad57ac-9fcc-443c-a613-95a08390bb68
+# ╔═╡ d851cfa3-1476-4cc7-8af4-4b29d8385642
 let
-	times,radii,pressures = prop("unmodifiedsmallerdt", "pgas", 1250)
-	scatter(times, pressures[20,:])
+	n=5
+	t,r,a = propheatmapiso("_", "pgas", 20; plotme=false)
+	heatmap(t,r[1:n],a[1:n,:])
 end
 
-# ╔═╡ c0819460-d5bd-4501-b5a6-2ecdc0aa7179
-prop("unmodifiedsmallerdt", "pgas", 1000)[1]
-
-# ╔═╡ 4c2ee2c2-270c-4526-b0b4-badb38cbaed2
-prop
-
-# ╔═╡ d4c97d2e-86e3-431b-9af9-d90a7eb33f03
-times
-
-# ╔═╡ 3b6948d3-a836-4ab5-8c08-b7989877bd53
-Δtwitht("unmodified", 200)
-
-# ╔═╡ 66573d2b-f02c-415c-8410-b460581f092b
-Δtwitht("slider_added")
-
-# ╔═╡ 16452895-b02a-4723-98df-90aea813b124
-propheatmap("unmodified", "pgas")
-
-# ╔═╡ 0fd3a5ea-a74d-41ac-9a5d-f641e9730320
-propheatmap("unmodified", "temperature")
-
-# ╔═╡ 4b981f97-b4a6-4046-b84b-f2cfaaf07f66
-propheatmap("unmodified", "zi")
-
-# ╔═╡ e78ff007-b2f5-48a4-ab8a-34326e93ffcd
-[propheatmap("unmodified", "pgas"), propheatmap("slider_added", "pgas"),propheatmap("unmodified", "temperature"), propheatmap("slider_added", "temperature"),propheatmap("unmodified", "zi"), propheatmap("slider_added", "zi"), propheatmap("unmodified", "xnacl"), propheatmap("slider_added", "xnacl")]
-
-# ╔═╡ cbe3c089-55e9-4489-8497-61c4d33c4de4
-heatmap(propheatmap("unmodified", "zi") - propheatmap("slider_added", "zi"))
-
-# ╔═╡ 2cf65c09-cc28-4f62-9868-2efac69aa217
-propheatmap("unmodified", "pgas") - propheatmap("slider_added", "pgas")
-
-# ╔═╡ d59efe77-982f-40e4-97be-60e9daf51d8b
-heatmap((propheatmap("unmodified", "temperature") .- propheatmap("slider_added", "temperature") )./(propheatmap("unmodified", "temperature") ), yscale=:log10, right_margin=10mm)
-
-# ╔═╡ 0a85291a-5399-4846-ad69-c9631b8f8e4d
+# ╔═╡ bb2b0e4f-a7ce-4677-99d1-b9003e5b8d08
 let
-property = "pgas"
-heatmap((propheatmap("unmodified", property) .- propheatmap("slider_added", property) )./(propheatmap("unmodified", property) ), yscale=:log10, right_margin=10mm)
+	n=5
+	t,r,a = propheatmapiso("_slider1_", "pgas", 20; plotme=false)
+	heatmap(t,r[1:n],a[1:n,:])
 end
 
-# ╔═╡ acf0db7a-5042-411f-97d3-f1c1af30676a
-let
-property = "zi"
-heatmap((propheatmap("unmodified", property) .- propheatmap("slider_added", property) ), yscale=:log10, right_margin=10mm, cmap=:redblue)
-end
-
-# ╔═╡ 882b9565-c2bd-486f-bebc-07a18b95dc9c
-heatmap(propheatmap("unmodified", "zi"))
-
-# ╔═╡ 587cfbcd-ffd4-49a9-8d90-6223531fd635
-heatmap(propheatmap("slider_added", "zi"))
-
-# ╔═╡ 5814d230-3840-434a-8a31-685a28cf9efe
-let
-property = "xnacl"
-heatmap((propheatmap("unmodified", property) .- propheatmap("slider_added", property) )./(propheatmap("unmodified", property) ), yscale=:log10)
-end
-
-# ╔═╡ 3594d396-aa59-4ec0-aef0-6e03955b6f66
-propheatmap("unmodified", "temperature") == propheatmap("slider_added", "temperature")
-
-# ╔═╡ 2816eeb2-4944-417d-be26-00f124f8faf5
-propheatmap("unmodified", "xnacl") - propheatmap("slider_added", "xnacl")
-
-# ╔═╡ efc7a395-7038-460d-a90a-f0deee6af89b
-let
-	n=10000
-	name = "ideal"
-	plot(xlabel = "time", ylabel = "radius", yscale = :log10, right_margin = 10mm)
-	allgas_ideal=[]
-	times=[]
-	for t in 1:532
-		file=("000" * string(t))[end-3:end]
-	
-		curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame)
-		push!(allgas_ideal, curtime.pgas)
-		push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
-	end
-
-	allgas_real=[]
-	name = "real"
-	times=[]
-	for t in 1:532
-		file=("000" * string(t))[end-3:end]
-	
-		curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame)
-		push!(allgas_real, curtime.pgas)
-		push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
-	end
-
-	times
-	radii = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame).x
-
-	allgas_ideal=hcat(allgas_ideal...)
-
-	allgas_real=hcat(allgas_real...)
-	#heatmap!(times, radii[1:n], (allgas_real - allgas_ideal)[1:n,:], title = "Difference", cmap = :bluesreds)
-	P_ideal = allgas_ideal
-	P_SW = allgas_real
-
-	heatmap!(times, radii[1:n], (2(P_ideal.-P_SW)./(P_ideal.+P_SW.-40e6))[1:n,:], title = "Pressure Relative Diff", cmap = :bluesreds)
-end
-
-# ╔═╡ 2685c160-e37d-49d6-86e9-b4b612c77911
-let
-	n=50
-	names = "ideal"
-	plot(xlabel = "time", ylabel = "radius", right_margin = 10mm)
-	allgas=[]
-	times=[]
-	for t in 1:532
-		file=("000" * string(t))[end-3:end]
-	
-		curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame)
-		push!(allgas, curtime.temperature)
-		push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
-	end
-	(allgas)
-	times
-	radii = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame).x
-	allgas=hcat(allgas...)
-	heatmap!(times, radii[1:n], allgas[1:n,:], title = "Ideal Temperature")
-end
-
-# ╔═╡ e7ef72cf-56f0-4b6f-b35f-818a706e5a57
+# ╔═╡ 04c7b296-165d-419a-bed8-6795084b6ed8
 let
 
-	n=50
-	names = "real"
-	plot(xlabel = "time", ylabel = "radius", right_margin = 10mm)
-	allgas=[]
-	times=[]
-	for t in 1:532
-		file=("000" * string(t))[end-3:end]
-	
-		curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame)
-		push!(allgas, curtime.temperature)
-		push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
-	end
-	(allgas)
-	times
-	radii = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame).x
-	allgas=hcat(allgas...)
-	heatmap!(times, radii[1:n], allgas[1:n,:], title = "SW Temperature")
-end
+	n=5
+	timesteps=100
+	t,r,a = propheatmapiso("_", "pgas", timesteps; plotme=false)
 
-# ╔═╡ 9998603f-785b-4ec1-9ed9-fd86f1b9941f
-let
-
-	n=1000
-	names = "real"
-	plot(xlabel = "time", ylabel = "radius", right_margin = 10mm)
-	allgas=[]
-	times=[]
-	for t in 1:532
-		file=("000" * string(t))[end-3:end]
-	
-		curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame)
-		push!(allgas, curtime.saturation_gas)
-		push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
-	end
-	(allgas)
-	times
-	radii = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame).x
-	allgas=hcat(allgas...)
-	heatmap!(times, radii[1:n], allgas[1:n,:], title = "SW gas saturation", yscale=:log10)
-	#plot(times, allgas[3,:], xlabel = "time", ylabel = "gas saturation")
-	times
-end
-
-# ╔═╡ 815aa00f-49c7-4ad1-b904-fd5b5af7f073
-let
-	n=10000
-	name = "ideal"
-	plot(xlabel = "time", ylabel = "radius", right_margin = 10mm, yscale=:log10)
-	allgas_ideal=[]
-	times=[]
-	for t in 1:532
-		file=("000" * string(t))[end-3:end]
-	
-		curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame)
-		push!(allgas_ideal, curtime.temperature)
-		push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
-	end
-
-	allgas_real=[]
-	name = "real"
-	times=[]
-	for t in 1:532
-		file=("000" * string(t))[end-3:end]
-	
-		curtime = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame)
-		push!(allgas_real, curtime.temperature)
-		push!(times, CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out.csv", comment="#", DataFrame).time[t+1])
-	end
-
-	times
-	radii = CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
-		, comment="#", DataFrame).x
-
-	allgas_ideal=hcat(allgas_ideal...)
-
-	allgas_real=hcat(allgas_real...)
-	#heatmap!(times, radii[1:n], (allgas_real - allgas_ideal)[1:n,:], title = "Difference", cmap = :heat)
-
-	T_ideal = allgas_ideal
-	T_SW = allgas_real
-
-	heatmap!(times, radii[1:n], (2(T_ideal.-T_SW)./(T_ideal.+T_SW))[1:n,:], title = "Temperature Relative Diff", cmap = :bluesreds)
+	t,r,aslid = propheatmapiso("_slider1_", "pgas", timesteps; plotme=false)
+	a==aslid
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -1747,60 +1363,15 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╠═8885fb9e-652e-11ef-3130-ef5ff8ba7123
-# ╠═8dffd09e-089c-48db-a373-5aeae9eab7d1
-# ╠═d1dbe87f-dac7-4c24-9d34-27085a414af6
-# ╠═6c36672b-cbd8-46e6-a160-567393e898c9
-# ╠═3ab54724-e149-445c-abc2-0c81be298415
-# ╠═25f564fe-a151-4a6a-aae5-520ed4edc2b1
-# ╠═470e065c-287c-4555-8912-1276148f8434
-# ╠═55509d35-5dc2-490c-8314-2b0a43ec2e24
-# ╠═2a3c3b23-e4b8-44b5-85c2-dc69090ba9ba
-# ╠═afe1df15-bfa3-4dde-bec7-f4eb378eb927
-# ╠═1d71a5ea-3686-4d86-9627-d76b87d7aa18
-# ╠═9028045c-7762-4606-a5ca-84648080442a
-# ╠═d5290421-6c2f-413a-9f48-bf5ef668316a
-# ╠═21433727-12af-4819-b940-02c7fd5ea5b2
-# ╠═99e46cb6-9507-400f-ab20-00037a7d6e2c
-# ╠═b8300189-8e18-4ffe-9c5d-895cde86a983
-# ╠═311626f5-7628-4cef-97d6-e1b38a4cd3b9
-# ╠═0d5b3715-5abb-4841-8cb9-af5b38a3b2bb
-# ╠═c6aca813-ed4a-4857-817c-24f4047f3ee5
-# ╠═d2894c9c-d6c6-48f1-91df-c3d31ff33ffd
-# ╠═a3adae8a-478d-4b62-9319-78b03212e17a
-# ╠═b2ec21a2-015b-444b-b5c9-daef0619bb3e
-# ╠═3229c6a9-6f86-4a85-8127-ac0199c7ec70
-# ╠═1becd1c8-fa2f-40d3-8a78-9d9e1864571a
-# ╠═cd46ad60-b341-4ad3-8038-d3f72eac895d
-# ╠═a6f08f7a-5ede-430e-bcd0-f7c04ea7ff13
-# ╠═639094ab-da89-4fc3-bcb7-eefdd0a27eac
-# ╠═9822ef32-a6ab-46c0-af7c-f82f35174f4e
-# ╠═9e1f3948-ef91-471e-92cb-ef78a817a94b
-# ╠═f39ad211-d0d0-4295-9cd2-d78314d69981
-# ╠═7aad57ac-9fcc-443c-a613-95a08390bb68
-# ╠═c0819460-d5bd-4501-b5a6-2ecdc0aa7179
-# ╠═4c2ee2c2-270c-4526-b0b4-badb38cbaed2
-# ╠═d4c97d2e-86e3-431b-9af9-d90a7eb33f03
-# ╠═3b6948d3-a836-4ab5-8c08-b7989877bd53
-# ╠═66573d2b-f02c-415c-8410-b460581f092b
-# ╠═16452895-b02a-4723-98df-90aea813b124
-# ╠═0fd3a5ea-a74d-41ac-9a5d-f641e9730320
-# ╠═4b981f97-b4a6-4046-b84b-f2cfaaf07f66
-# ╠═e78ff007-b2f5-48a4-ab8a-34326e93ffcd
-# ╠═cbe3c089-55e9-4489-8497-61c4d33c4de4
-# ╠═2cf65c09-cc28-4f62-9868-2efac69aa217
-# ╠═d59efe77-982f-40e4-97be-60e9daf51d8b
-# ╠═0a85291a-5399-4846-ad69-c9631b8f8e4d
-# ╠═acf0db7a-5042-411f-97d3-f1c1af30676a
-# ╠═882b9565-c2bd-486f-bebc-07a18b95dc9c
-# ╠═587cfbcd-ffd4-49a9-8d90-6223531fd635
-# ╠═5814d230-3840-434a-8a31-685a28cf9efe
-# ╠═3594d396-aa59-4ec0-aef0-6e03955b6f66
-# ╠═2816eeb2-4944-417d-be26-00f124f8faf5
-# ╠═efc7a395-7038-460d-a90a-f0deee6af89b
-# ╠═2685c160-e37d-49d6-86e9-b4b612c77911
-# ╠═e7ef72cf-56f0-4b6f-b35f-818a706e5a57
-# ╠═9998603f-785b-4ec1-9ed9-fd86f1b9941f
-# ╠═815aa00f-49c7-4ad1-b904-fd5b5af7f073
+# ╠═4a4ff316-7050-11ef-0242-d3b96087b959
+# ╠═67ab3b57-d810-4ff4-aef1-10c4746cdf3f
+# ╠═d32ae4a8-fe00-4945-9429-96c6b8b9dbfa
+# ╠═f2b984db-5902-4263-a103-9f04cbd91855
+# ╠═f7208e37-52b0-4ca8-803e-174712b8db4a
+# ╠═af5c6cb1-abba-4b8d-a38d-b66fca70783f
+# ╠═073fa2ba-9d24-40cc-9336-239261584385
+# ╠═d851cfa3-1476-4cc7-8af4-4b29d8385642
+# ╠═bb2b0e4f-a7ce-4677-99d1-b9003e5b8d08
+# ╠═04c7b296-165d-419a-bed8-6795084b6ed8
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

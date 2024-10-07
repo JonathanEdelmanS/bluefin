@@ -204,7 +204,7 @@
     type = DirichletBC
     boundary = left
     variable = temperature
-    value = 20
+    value = 70
   []
   [gas_injecton]
     type = PorousFlowSink

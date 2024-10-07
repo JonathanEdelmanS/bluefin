@@ -20,6 +20,9 @@ using PlutoUI, DataFrames, CSV, Plots
 # ╔═╡ 21433727-12af-4819-b940-02c7fd5ea5b2
 using Plots.PlotMeasures 
 
+# ╔═╡ 470e065c-287c-4555-8912-1276148f8434
+plot(r,p, xlabel = "r", ylabel = "pressure")
+
 # ╔═╡ 2a3c3b23-e4b8-44b5-85c2-dc69090ba9ba
 T
 
@@ -39,8 +42,8 @@ end
 # ╔═╡ 6c36672b-cbd8-46e6-a160-567393e898c9
 begin
 	plot()
-	for name in [ "ideal"]
-	onetime =  CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_0200.csv"
+	for name in [ "real"]
+	onetime =  CSV.read("../problems/theisbrinecoslidernon_iso/theis_brineco2_nonisothermal_"*name*"_out_line_"*file*".csv"
 	, comment="#", DataFrame)
 	ρ = onetime.density_gas[2:end]
 	p = onetime.pgas[2:end]
@@ -111,6 +114,9 @@ end
 
 # ╔═╡ 9028045c-7762-4606-a5ca-84648080442a
 pρt
+
+# ╔═╡ d5290421-6c2f-413a-9f48-bf5ef668316a
+plot(r.^2 ./t,pρt )
 
 # ╔═╡ 99e46cb6-9507-400f-ab20-00037a7d6e2c
 let
@@ -226,66 +232,16 @@ end
 Δtwitht("ideal")
 
 # ╔═╡ b2ec21a2-015b-444b-b5c9-daef0619bb3e
-begin
-	propheatmap("unmodified", "pgas", 8000)
-end
+propheatmap("unmodified", "pgas", 200)
 
 # ╔═╡ 3229c6a9-6f86-4a85-8127-ac0199c7ec70
 begin
-	n=170
-	times,radii,pressures = prop("unmodified", "pgas", n)	
-	timessmallerdt,radiismallerdt,pressuressmallerdt = prop("unmodifiedsmallerdt", "pgas", n*10)
-end
-
-# ╔═╡ 1becd1c8-fa2f-40d3-8a78-9d9e1864571a
-
-
-# ╔═╡ cd46ad60-b341-4ad3-8038-d3f72eac895d
-heatmap(times, radii, pressures, yscale=:log10, cmap=:delta)
-
-# ╔═╡ a6f08f7a-5ede-430e-bcd0-f7c04ea7ff13
-heatmap(timessmallerdt, radiismallerdt, pressuressmallerdt, yscale=:log10, cmap=:delta, levels=3)
-
-# ╔═╡ 639094ab-da89-4fc3-bcb7-eefdd0a27eac
-let
-[propheatmap("unmodified", "pgas", 1800),propheatmap("unmodified", "temperature", 1800), propheatmap("unmodified", "zi", 1800), propheatmap("unmodified", "saturation_gas", 1800), ]
-end
-
-# ╔═╡ 9822ef32-a6ab-46c0-af7c-f82f35174f4e
-begin
-	@bind r Slider(1:10000)
-end
-
-# ╔═╡ 470e065c-287c-4555-8912-1276148f8434
-plot(r,p, xlabel = "r", ylabel = "pressure")
-
-# ╔═╡ d5290421-6c2f-413a-9f48-bf5ef668316a
-plot(r.^2 ./t,pρt )
-
-# ╔═╡ 9e1f3948-ef91-471e-92cb-ef78a817a94b
-@show r
-
-# ╔═╡ f39ad211-d0d0-4295-9cd2-d78314d69981
-begin
-	scatter(times, pressures[r,:], label = "dt=.25", markersize=3)
-	scatter!(timessmallerdt, pressuressmallerdt[r,:], label = "dt=.025", markersize=1)
-	
-end
-
-# ╔═╡ 7aad57ac-9fcc-443c-a613-95a08390bb68
-let
-	times,radii,pressures = prop("unmodifiedsmallerdt", "pgas", 1250)
+	times,radii,pressures = prop("unmodified", "pgas", 200)
 	scatter(times, pressures[20,:])
 end
 
-# ╔═╡ c0819460-d5bd-4501-b5a6-2ecdc0aa7179
-prop("unmodifiedsmallerdt", "pgas", 1000)[1]
-
-# ╔═╡ 4c2ee2c2-270c-4526-b0b4-badb38cbaed2
-prop
-
 # ╔═╡ d4c97d2e-86e3-431b-9af9-d90a7eb33f03
-times
+
 
 # ╔═╡ 3b6948d3-a836-4ab5-8c08-b7989877bd53
 Δtwitht("unmodified", 200)
@@ -1770,16 +1726,6 @@ version = "1.4.1+1"
 # ╠═a3adae8a-478d-4b62-9319-78b03212e17a
 # ╠═b2ec21a2-015b-444b-b5c9-daef0619bb3e
 # ╠═3229c6a9-6f86-4a85-8127-ac0199c7ec70
-# ╠═1becd1c8-fa2f-40d3-8a78-9d9e1864571a
-# ╠═cd46ad60-b341-4ad3-8038-d3f72eac895d
-# ╠═a6f08f7a-5ede-430e-bcd0-f7c04ea7ff13
-# ╠═639094ab-da89-4fc3-bcb7-eefdd0a27eac
-# ╠═9822ef32-a6ab-46c0-af7c-f82f35174f4e
-# ╠═9e1f3948-ef91-471e-92cb-ef78a817a94b
-# ╠═f39ad211-d0d0-4295-9cd2-d78314d69981
-# ╠═7aad57ac-9fcc-443c-a613-95a08390bb68
-# ╠═c0819460-d5bd-4501-b5a6-2ecdc0aa7179
-# ╠═4c2ee2c2-270c-4526-b0b4-badb38cbaed2
 # ╠═d4c97d2e-86e3-431b-9af9-d90a7eb33f03
 # ╠═3b6948d3-a836-4ab5-8c08-b7989877bd53
 # ╠═66573d2b-f02c-415c-8410-b460581f092b
