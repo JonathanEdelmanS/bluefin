@@ -90,14 +90,14 @@ end
 # ╔═╡ 073fa2ba-9d24-40cc-9336-239261584385
 begin
 	
-	heatmap(t,r,unmod-slid, yscale=:log10)
+	heatmap(t,r,unmod-slid, yscale=:log10, xscale=:log10)
 end
 
 # ╔═╡ d851cfa3-1476-4cc7-8af4-4b29d8385642
 let
-	n=5
+	n=100
 	t,r,a = propheatmapiso("_", "pgas", 20; plotme=false)
-	heatmap(t,r[1:n],a[1:n,:])
+	heatmap(t,r[1:n],a[1:n,:],  yscale=:log10, xscale=:log10)
 end
 
 # ╔═╡ bb2b0e4f-a7ce-4677-99d1-b9003e5b8d08

@@ -4,123 +4,565 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ a1facde9-530e-4520-b115-81489125b6dd
+# ╔═╡ dd191d6e-27b4-11f0-2350-33f8e64f08e2
+using PlutoUI, Plots, DataFrames, CSV,  Plots.PlotMeasures , DifferentialEquations
+
+# ╔═╡ 6e3cd9fa-42ba-4620-9f77-f068799196f4
+using BenchmarkTools
+
+# ╔═╡ ba838e3b-1fe6-493a-863f-39a28445644a
+module m
+	    # critical terms and values for CO2
+	    tc = 304.1282;              # critical temperature in K
+	    pc = 7.3773;                # critical pressure in MPa
+	    rhoceos = 446.62;           # critical density in kg/m3
+	    rhoc = 467.6;               # critical density in kg/m3
+	    rmol = 8.314510;            # molar gas constant in j/mol/k
+	    molwt = 44.0098;            # molecular weight in g/mol
+	    r = rmol/molwt * 1e3;             # specific gas constant in j/kg/K
+	    # n constants
+	    n1 = 0.89875108; n2 = -2.1281985; n3 = -0.068190320; n4 = 0.076355306;
+	    n5 = 0.00022053253; n6 = 0.41541823; n7 = 0.71335657; n8 = 0.00030354234;
+	    n9 = -0.36643143; n10 = -0.0014407781; n11 = -0.089166707; n12 = -0.023699887;
+	    # d constants
+	    d1 = 1.00; d2 = 1.00; d3 = 1.00; d4 = 3.00; d5 = 7.00; d6 = 1.00;
+	    d7 = 2.00; d8 = 5.00; d9 = 1.00; d10 = 1.00; d11 = 4.00; d12 = 2.00;
+	    # t constants
+	    t1 = 0.25; t2 = 1.25; t3 = 1.50; t4 = 0.25; t5 = 0.875; t6 = 2.375; t7 = 2.00;
+	    t8 = 2.125; t9 = 3.50; t10 = 6.50; t11 = 4.75; t12 = 12.50;
+	    # p constants
+	    p6 = 1.0; p7 = 1.0; p8 = 1.0; p9 = 2.0; p10 = 2.0; p11 = 2.0; p12 = 3.0;
+	    # a constants
+	    a1 = 8.37304456; a2 = -3.70454304; a3 = 2.5; a4 = 1.99427042;
+	    a5 = 0.62105248; a6 = 0.41195293; a7 = 1.04028922; a8 = 0.08327678;
+	    # theta constants
+	    th4 = 3.15163; th5 = 6.1119; th6 = 6.77708; th7 = 11.32384; th8 = 27.08792;
+	end
+
+# ╔═╡ 7e1f7738-c3aa-46d8-813a-9fc195d7e73d
 begin
-	using LinearAlgebra
-	using DifferentialEquations
-	using Plots
+	#--------------------------------------------------------------------------
+	# All the subsequent functions are calculated based on equations from span
+	# wagner book/ papers (reduced form and full form)
+	    # Function to calculate alpha residual
+	    function alfr(tau,del)
+	        alphar1 = m.n1*del^m.d1*tau^m.t1+m.n2*del^m.d2*tau^m.t2+m.n3*del^m.d3*tau^m.t3+m.n4*del^m.d4*tau^m.t4+m.n5*del^m.d5*tau^m.t5;
+	        alphar2 = m.n6*del^m.d6*tau^m.t6*exp(-del^m.p6)+m.n7*del^m.d7*tau^m.t7*exp(-del^m.p7);
+	        alphar3 = m.n8*del^m.d8*tau^m.t8*exp(-del^m.p8)+m.n9*del^m.d9*tau^m.t9*exp(-del^m.p9)+m.n10*del^m.d10*tau^m.t10*exp(-del^m.p10);
+	        alphar4 = m.n11*del^m.d11*tau^m.t11*exp(-del^m.p11)+m.n12*del^m.d12*tau^m.t12*exp(-del^m.p12);
+	        alphar = alphar1+alphar2+alphar3+alphar4;
+	        return alphar
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate differential of alpha residual w.r.t delta
+	    function dalfrdel(tau,del)
+	        alphar1 = m.n1*m.d1*del^(m.d1-1.0)*tau^m.t1+m.n2*m.d2*del^(m.d2-1.0)*tau^m.t2+m.n3*m.d3*del^(m.d3-1.0)*tau^m.t3;
+	        alphar2 = m.n4*m.d4*del^(m.d4-1.0)*tau^m.t4+m.n5*m.d5*del^(m.d5-1.0)*tau^m.t5;
+	        alphar3 = m.n6*del^(m.d6-1.0)*(m.d6-m.p6*del^m.p6)*tau^m.t6*exp(-del^m.p6)+m.n7*del^(m.d7-1.0)*(m.d7-m.p7*del^m.p7)*tau^m.t7*exp(-del^m.p7);
+	        alphar4 = m.n8*del^(m.d8-1.0)*(m.d8-m.p8*del^m.p8)*tau^m.t8*exp(-del^m.p8)+m.n9*del^(m.d9-1.0)*(m.d9-m.p9*del^m.p9)*tau^m.t9*exp(-del^m.p9);
+	        alphar5 = m.n10*del^(m.d10-1.0)*(m.d10-m.p10*del^m.p10)*tau^m.t10*exp(-del^m.p10)+m.n11*del^(m.d11-1.0)*(m.d11-m.p11*del^m.p11)*tau^m.t11*exp(-del^m.p11);
+	        alphar6 = m.n12*del^(m.d12-1.0)*(m.d12-m.p12*del^m.p12)*tau^m.t12*exp(-del^m.p12);
+	        alphar = alphar1+alphar2+alphar3+alphar4+alphar5+alphar6;
+	        return alphar
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate  double differential of alpha residual w.r.t delta
+	    function d2alfrdel(tau,del)
+	        alphar1 = m.n1*m.d1*(m.d1-1.0)*del^(m.d1-2.0)*tau^m.t1+m.n2*m.d2*(m.d2-1.0)*del^(m.d2-2.0)*tau^m.t2+m.n3*m.d3*(m.d3-1.0)*del^(m.d3-2.0)*tau^m.t3;
+	        alphar2 = m.n4*m.d4*(m.d4-1.0)*del^(m.d4-2.0)*tau^m.t4+m.n5*m.d5*(m.d5-1.0)*del^(m.d5-2.0)*tau^m.t5;
+	        alphar6 = m.n6*del^(m.d6-2.0)*((m.d6-m.p6*del^m.p6)*(m.d6-1.0-m.p6*del^m.p6)-m.p6^2.0*del^m.p6)*tau^m.t6*exp(-del^m.p6);
+	        alphar7 = m.n7*del^(m.d7-2.0)*((m.d7-m.p7*del^m.p7)*(m.d7-1.0-m.p7*del^m.p7)-m.p7^2.0*del^m.p7)*tau^m.t7*exp(-del^m.p7);
+	        alphar8 = m.n8*del^(m.d8-2.0)*((m.d8-m.p8*del^m.p8)*(m.d8-1.0-m.p8*del^m.p8)-m.p8^2.0*del^m.p8)*tau^m.t8*exp(-del^m.p8);
+	        alphar9 = m.n9*del^(m.d9-2.0)*((m.d9-m.p9*del^m.p9)*(m.d9-1.0-m.p9*del^m.p9)-m.p9^2.0*del^m.p9)*tau^m.t9*exp(-del^m.p9);
+	        alphar10 = m.n10*del^(m.d10-2.0)*((m.d10-m.p10*del^m.p10)*(m.d10-1.0-m.p10*del^m.p10)-m.p10^2.0*del^m.p10)*tau^m.t10*exp(-del^m.p10);
+	        alphar11 = m.n11*del^(m.d11-2.0)*((m.d11-m.p11*del^m.p11)*(m.d11-1.0-m.p11*del^m.p11)-m.p11^2.0*del^m.p11)*tau^m.t11*exp(-del^m.p11);
+	        alphar12 = m.n12*del^(m.d12-2.0)*((m.d12-m.p12*del^m.p12)*(m.d12-1.0-m.p12*del^m.p12)-m.p12^2.0*del^m.p12)*tau^m.t12*exp(-del^m.p12);
+	        alphar = alphar1+alphar2+alphar6+alphar7+alphar8+alphar9+alphar10+alphar11+alphar12;
+	        return alphar;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate differential of alpha residual w.r.t tau
+	    function dalfrtau(tau,del)
+	        alphar1 = m.n1*m.t1*del^m.d1*tau^(m.t1-1.0)+m.n2*m.t2*del^m.d2*tau^(m.t2-1.0)+m.n3*m.t3*del^m.d3*tau^(m.t3-1.0);
+	        alphar2 = m.n4*m.t4*del^m.d4*tau^(m.t4-1.0)+m.n5*m.t5*del^m.d5*tau^(m.t5-1.0);
+	        alphar3 = m.n6*m.t6*del^m.d6*tau^(m.t6-1.0)*exp(-del^m.p6)+m.n7*m.t7*del^m.d7*tau^(m.t7-1.0)*exp(-del^m.p7);
+	        alphar4 = m.n8*m.t8*del^m.d8*tau^(m.t8-1.0)*exp(-del^m.p8)+m.n9*m.t9*del^m.d9*tau^(m.t9-1.0)*exp(-del^m.p9);
+	        alphar5 = m.n10*m.t10*del^m.d10*tau^(m.t10-1.0)*exp(-del^m.p10)+m.n11*m.t11*del^m.d11*tau^(m.t11-1.0)*exp(-del^m.p11);
+	        alphar6 = m.n12*m.t12*del^m.d12*tau^(m.t12-1.0)*exp(-del^m.p12);
+	        alphar = alphar1+alphar2+alphar3+alphar4+alphar5+alphar6;
+	        return alphar;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate double differential of alpha residual w.r.t tau
+	    function d2alfrtau(tau,del)
+	        alphar1 = m.n1*m.t1*(m.t1-1.0)*del^m.d1*tau^(m.t1-2.0)+m.n2*m.t2*(m.t2-1.0)*del^m.d2*tau^(m.t2-2.0)+m.n3*m.t3*(m.t3-1.0)*del^m.d3*tau^(m.t3-2.0);
+	        alphar2 = m.n4*m.t4*(m.t4-1.0)*del^m.d4*tau^(m.t4-2.0)+m.n5*m.t5*(m.t5-1.0)*del^m.d5*tau^(m.t5-2.0);
+	        alphar3 = m.n6*m.t6*(m.t6-1.0)*del^m.d6*tau^(m.t6-2.0)*exp(-del^m.p6)+m.n7*m.t7*(m.t7-1.0)*del^m.d7*tau^(m.t7-2.0)*exp(-del^m.p7);
+	        alphar4 = m.n8*m.t8*(m.t8-1.0)*del^m.d8*tau^(m.t8-2.0)*exp(-del^m.p8)+m.n9*m.t9*(m.t9-1.0)*del^m.d9*tau^(m.t9-2.0)*exp(-del^m.p9);
+	        alphar5 = m.n10*m.t10*(m.t10-1.0)*del^m.d10*tau^(m.t10-2.0)*exp(-del^m.p10)+m.n11*m.t11*(m.t11-1.0)*del^m.d11*tau^(m.t11-2.0)*exp(-del^m.p11);
+	        alphar6 = m.n12*m.t12*(m.t12-1.0)*del^m.d12*tau^(m.t12-2.0)*exp(-del^m.p12);
+	        alphar = alphar1+alphar2+alphar3+alphar4+alphar5+alphar6;
+	        return alphar;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate double differential of alpha residual w.r.t tau and delta
+	    function d2alfrdeltau(tau,del)
+	        alphar1 = m.n1*m.d1*m.t1*del^(m.d1-1.0)*tau^(m.t1-1.0)+m.n2*m.d2*m.t2*del^(m.d2-1.0)*tau^(m.t2-1.0)+m.n3*m.d3*m.t3*del^(m.d3-1.0)*tau^(m.t3-1.0);
+	        alphar2 = m.n4*m.d4*m.t4*del^(m.d4-1.0)*tau^(m.t4-1.0)+m.n5*m.d5*m.t5*del^(m.d5-1.0)*tau^(m.t5-1.0);
+	        alphar3 = m.n6*m.t6*del^(m.d6-1.0)*(m.d6-m.p6*del^m.p6)*tau^(m.t6-1.0)*exp(-del^m.p6)+m.n7*m.t7*del^(m.d7-1.0)*(m.d7-m.p7*del^m.p7)*tau^(m.t7-1.0)*exp(-del^m.p7);
+	        alphar4 = m.n8*m.t8*del^(m.d8-1.0)*(m.d8-m.p8*del^m.p8)*tau^(m.t8-1.0)*exp(-del^m.p8)+m.n9*m.t9*del^(m.d9-1.0)*(m.d9-m.p9*del^m.p9)*tau^(m.t9-1.0)*exp(-del^m.p9);
+	        alphar5 = m.n10*m.t10*del^(m.d10-1.0)*(m.d10-m.p10*del^m.p10)*tau^(m.t10-1.0)*exp(-del^m.p10)+m.n11*m.t11*del^(m.d11-1.0)*(m.d11-m.p11*del^m.p11)*tau^(m.t11-1.0)*exp(-del^m.p11);
+	        alphar6 = m.n12*m.t12*del^(m.d12-1.0)*(m.d12-m.p12*del^m.p12)*tau^(m.t12-1.0)*exp(-del^m.p12)
+	        alphar = alphar1+alphar2+alphar3+alphar4+alphar5+alphar6;
+	        return alphar;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate standard state alphao
+	    function alfo(tau,del)
+	        alphao1 = log(del)+m.a1+m.a2*tau+m.a3*log(tau);
+	        alphao2 = m.a4*log(1.0-exp(-tau*m.th4))+m.a5*log(1.0-exp(-tau*m.th5))+m.a6*log(1.0-exp(-tau*m.th6));
+	        alphao3 = m.a7*log(1.0-exp(-tau*m.th7))+m.a8*log(1.0-exp(-tau*m.th8));
+	        alphao = alphao1+alphao2+alphao2;
+	        return alphao
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate differential of alphao w.r.t tau
+	
+	    function dalfotau(tau,del)
+	        alphao1 = m.a2+m.a3/tau;
+	        alphao2 = m.a4*m.th4*(1.0/(1.0-exp(-tau*m.th4))-1.0)+m.a5*m.th5*(1.0/(1.0-exp(-tau*m.th5))-1.0)+m.a6*m.th6*(1.0/(1.0-exp(-tau*m.th6))-1.0);
+	        alphao3 = m.a7*m.th7*(1.0/(1.0-exp(-tau*m.th7))-1.0)+m.a8*m.th8*(1.0/(1.0-exp(-tau*m.th8))-1.0);
+	        alphao = alphao1+alphao2+alphao3;
+	        return alphao;
+	    end
+	
+	#--------------------------------------------------------------------------
+	    # Function to calculate double differential of alphao w.r.t tau
+	    function d2alfotau(tau,del)
+	        alphao1 = -m.a3/tau^2.0-m.a4*m.th4^2.0*exp(-tau*m.th4)*(1.0/(1.0-exp(-tau*m.th4))^2.0);
+	        alphao2 = m.a5*m.th5^2.0*exp(-tau*m.th5)*(1.0/(1.0-exp(-tau*m.th5))^2.0)+m.a6*m.th6^2.0*exp(-tau*m.th6)*(1.0/(1.0-exp(-tau*m.th6))^2.0);
+	        alphao3 = m.a7*m.th7^2.0*exp(-tau*m.th7)*(1.0/(1.0-exp(-tau*m.th7))^2.0)+m.a8*m.th8^2.0*exp(-tau*m.th8)*(1.0/(1.0-exp(-tau*m.th8))^2.0);
+	        alphao = alphao1-alphao2-alphao3;
+	        return alphao;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate differential of alphao w.r.t delta
+	    function dalfodel(tau,del)
+	        alphao = 1.0/del;
+	        return alphao;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate double differential of alphao w.r.t delta
+	    function d2alfodel(tau,del)
+	        alphao = -1.0/del^2.0;
+	        return alphao;
+	    end
+	#--------------------------------------------------------------------------
+	# Function to solve for density
+	# Newton-Raphson algorithm over del. Will generate two different
+	# results based on initial guesses.
+	function densol(p,t,dguess)
+	    count2 = 0;
+	    maxval = 100;
+	    dold = dguess;
+	    dnew = 0.1;
+	    tau = m.tc/t;
+	    tol = 1.0e-7;
+	    fold = (p/m.rhoc/dold/m.r/t)-1.0-dold*dalfrdel(tau,dold);
+	    fdash = -(p/m.rhoc/dold^2.0/m.r/t)-dalfrdel(tau,dold)-dold*d2alfrdel(tau,dold);
+	    for i in 1:maxval
+	        if dold < 0.0 || dold > 3.0
+	            if dguess < 1.0
+	                dnew = 0.4;
+	                count2 = count2 +1;
+	            else
+	                dnew = 1.3;
+	                count2 = count2 +1;
+	            end
+	        else
+	            dnew = dold-fold/fdash;
+	        end
+	        fnew = (p/m.rhoc/dnew/m.r/t)-1.0-dnew*dalfrdel(tau,dnew);
+	        fdash = -(p/m.rhoc/dnew^2.0/m.r/t)-dalfrdel(tau,dnew)-dnew*d2alfrdel(tau,dnew);
+	        if abs(fnew) < tol
+	            break
+	        else
+	            dold = dnew;
+	            fold = fnew;
+	        end
+	        if i == maxval || count2 == 2
+	            dnew = 10.0;
+	            break
+	        end
+	    end
+	    del = dnew;
+	    fugacity = exp(alfr(tau,del)+del*dalfrdel(tau,del)-log(1.0+del*dalfrdel(tau,del)));
+	    den = del*m.rhoc;
+	    return den, fugacity;
+	end
+	#--------------------------------------------------------------------------
+	# Phase equilibrium solver
+	function swdenco2(p,t)
+	    (deng, fugg) = densol(p,t,0.001);
+	    (denl, fugl) = densol(p,t,2.0);
+	    # Check if the densities are the same
+	    errd::Float64 = abs(deng-denl)::Float64;
+	    if errd < 1.0e-3
+	        if deng <= m.rhoceos
+	            fugl = 10000000.0;
+	        else
+	            fugg = 10000000.0;
+	        end
+	    end
+	    errf::Float64 = abs(fugg-fugl);
+	    if errf < 1.0e-7
+	        deng = deng;
+	        denl = denl;
+	    elseif fugg < fugl
+	        deng = deng;
+	        denl = 0.0;
+	    else
+	        deng = 0.0;
+	        denl = denl;
+	    end
+	    #den::Tuple{deng::Float64,::Float64};
+	    den = (deng,denl);      # density is in kg/m3
+	    #println("density = $den")
+	    return den;
+	end
+	#--------------------------------------------------------------------------
+	#Fugacity calculator
+	function swfugco2(p,t)
+	    den = swdenco2(p,t)
+	    tau = m.tc/t;
+	    del = den./m.rhoc;
+	    fugacity = zeros(2);
+	    for i in 1:2
+	        if del[i] == 0.0
+	            fugacity[i] = 0.0;
+	        else
+	            fugacity[i] = exp(alfr(tau,del[i])+del[i]*dalfrdel(tau,del[i])-log(1.0+del[i]*dalfrdel(tau,del[i])));
+	        end
+	    end
+	    return fugacity
+	end
+	#--------------------------------------------------------------------------
+	#joule-thomson coefficient
+	function swjt(p,t)
+	    den = swdenco2(p,t);
+	    tau = m.tc/t;
+	    del = den./m.rhoc;
+	    jt = zeros(2);
+	    for i in 1:2
+	        if del[i] == 0.0
+	            jt[i] = 0.0;
+	        else
+	            jt[i] = -1.005*1000.0*(1.0/m.r/den[i])*(del[i]*dalfrdel(tau,del[i])+del[i]^2.0*d2alfrdel(tau,del[i])+tau*del[i]*d2alfrdeltau(tau,del[i]))*((1.0+del[i]*dalfrdel(tau,del[i])-tau*del[i]*d2alfrdeltau(tau,del[i]))^2.0-tau^2.0*(d2alfotau(tau,del[i])+d2alfrtau(tau,del[i]))*(1.0+2.0*del[i]*dalfrdel(tau,del[i])+del[i]^2.0*d2alfrdel(tau,del[i])))^-1.0;
+	        end
+	    end
+	    jtout = (jt[1], jt[2]); # joule-thomson coefficient is in K/MPa
+	    return jtout
+	end
+	#--------------------------------------------------------------------------
 	
 end
 
-# ╔═╡ b32f9216-a1eb-11ef-2859-cd7714c5243f
+# ╔═╡ 8db7494c-7ca9-4c1d-84cb-42397063fed7
 begin
-	# Physical and gas properties for CO₂
-	const L = 10.0             # Length of the pipe (m)
-	const D = 0.1              # Diameter of the pipe (m)
-	const μ = 1.48e-5          # Dynamic viscosity of CO₂ (Pa·s)
-	const R_CO2 = 188.92       # Specific gas constant for CO₂ (J/(kg·K))
-	const γ = 1.3              # Heat capacity ratio for CO₂
-	const T_inlet = 300.0      # Inlet temperature (K)
-	const p_inlet = 5e5        # Inlet pressure (Pa)
-	const Cμ = 0.09            # Empirical constant for k-epsilon model
-	
-	# Grid and initial conditions
-	N = 100  # Number of grid points along the pipe length
-	dx = L / N
-	x = LinRange(0, L, N)
-	
-	# Initial profiles for variables: density (ρ), velocity (U), temperature (T), turbulent kinetic energy (k), and dissipation rate (ε)
-	ρ = fill(p_inlet / (R_CO2 * T_inlet), N)  # Initial density (using ideal gas law)
-	U = fill(10.0, N)                         # Initial velocity profile
-	T = fill(T_inlet, N)                      # Temperature profile
-	k = fill(1e-3, N)                         # Initial turbulent kinetic energy
-	ε = fill(1e-4, N)                         # Initial dissipation rate
-	
-	# Define the eddy viscosity function based on k-epsilon model
-	function eddy_viscosity(k, ε)
-	    return Cμ * k.^2 ./ ε
+	function swpco2(ρ,T, SW_Coef = 1)
+		tau = m.tc/T;
+		del = ρ/m.rhoc
+		return m.r * T * ρ * (1 + SW_Coef * del * dalfrdel(tau,del))
 	end
-	
-	# Define the equation of state for CO₂ (ideal gas)
-	function equation_of_state(ρ, T)
-	    return ρ .* R_CO2 .* T
+	function swdpdρ(ρ,T, SW_Coef = 1)
+		tau = m.tc/T;
+		del = ρ/m.rhoc
+		return (m.r* T * (1 + SW_Coef * del * dalfrdel(tau,del)) + SW_Coef * m.r * ρ * T *(dalfrdel(tau,del) + del * d2alfrdel(tau,del))/m.rhoc)
 	end
-	
-	# Define the governing equations in terms of ODEs for simplicity
-	function compressible_pipe_model!(du, u, p, t)
-	    ρ, U, T, k, ε = u[1:N], u[N+1:2N], u[2N+1:3N], u[3N+1:4N], u[4N+1:5N]
-	    νt = eddy_viscosity(k, ε)
-	
-	    # Calculate pressure using the ideal gas law
-	    p = equation_of_state(ρ, T)
-	
-	    # Calculate derivatives (using central differences)
-	    dρdx = diff(ρ) / dx
-	    dUdx = diff(U) / dx
-	    dTdx = diff(T) / dx
-	    dkdx = diff(k) / dx
-	    dedx = diff(ε) / dx
-	
-	    # Update density equation (mass continuity)
-	    for i in 2:N-1
-	        du[i] = -ρ[i] * dUdx[i] - U[i] * dρdx[i]
-	    end
-	
-	    # Update momentum equation
-	    for i in 2:N-1
-	        du[N+i] = -U[i] * dUdx[i] - (1/ρ[i]) * (p[i+1] - p[i-1]) / (2 * dx) + (μ + νt[i]) * (U[i+1] - 2*U[i] + U[i-1]) / dx^2
-	    end
-	
-	    # Update energy equation (temperature evolution)
-	    for i in 2:N-1
-	        du[2N+i] = -U[i] * dTdx[i] + (μ + νt[i]) * (T[i+1] - 2*T[i] + T[i-1]) / dx^2
-	    end
-	
-	    # Update turbulent kinetic energy equation
-	    for i in 2:N-1
-	        du[3N+i] = -U[i] * dkdx[i] + νt[i] * (k[i+1] - 2*k[i] + k[i-1]) / dx^2 - ε[i]
-	    end
-	
-	    # Update dissipation rate equation
-	    for i in 2:N-1
-	        du[4N+i] = -U[i] * dedx[i] + νt[i] * (ε[i+1] - 2*ε[i] + ε[i-1]) / dx^2 - ε[i]^2 / k[i]
-	    end
-	
-	    # Boundary conditions
-	    du[1] = ρ[1] - p_inlet / (R_CO2 * T_inlet)  # Inlet density condition
-	    du[N] = U[N]                                # Outlet velocity condition
-	    du[N+1] = U[1] - 10.0                       # Inlet velocity condition
-	    du[2N+1] = T[1] - T_inlet                   # Inlet temperature condition
+	function swdpdT(ρ,T, SW_Coef = 1)
+		tau = m.tc/T;
+		del = ρ/m.rhoc
+		return (m.r * ρ * (1 + SW_Coef * (del * dalfrdel(tau,del) - del * tau * d2alfrdeltau(tau,del))))
 	end
-	
-	# Initial condition vector
-	u0 = vcat(ρ, U, T, k, ε)
-	
-	# Time integration parameters
-	tspan = (0.0, 5.0)  # Simulate for 5 seconds
 end
 
-# ╔═╡ 4488046e-c212-4845-8e56-6d706cb96889
+# ╔═╡ 714d1819-4a27-4c57-a250-f1c74f11e3ca
 begin
-	# Solve the system
-	prob = ODEProblem(compressible_pipe_model!, u0, tspan)
-	sol = solve(prob, Tsit5())
-	
-	# Plot results (requires Plots.jl)
-	plot(x, sol[1:N, end], xlabel="Distance (m)", ylabel="Density (kg/m³)", title="Density Profile")
-	
+	pbhSW=CSV.read("projects/bluefin/problems/LaForce/2D_SWFluid_csv.csv", comment="#", DataFrame);
+	pbhIG=CSV.read("projects/bluefin/problems/LaForce/2D_IdealFluid_csv.csv", comment="#", DataFrame);
+	2
 end
+
+# ╔═╡ da9b4fd3-e439-47f4-bce6-50a8404abea4
+begin
+	g=9.81 #m/s^2
+	#p1 = 6.8e6 #6.8MPa bottom
+	T1 = 301 #K
+	Γ = -.016 #K/m
+	Z = 550 #m
+	T0 = T1 - Γ * Z
+	Arock = 11 * .1 * 2 * π
+	Apipe = .1^2 * π
+	#ρ1IG = p1 / (m.r * T1)
+	#ρ1SW = maximum(swdenco2(p1, T1))
+	f = .1         # friction factor [1/m]
+	d = .2
+	fric = f/d
+	uρ = 1.991 * Arock / Apipe
+	#u1SW = u1ρ1/ρ1SW
+	#u1IG = u1ρ1/ρ1IG
+	rampup = 100
+end
+
+# ╔═╡ a0218a0d-bba3-4129-ae4d-669f10c782b8
+1.991 * Arock
+
+# ╔═╡ b9e3cd2c-0650-40ed-a554-6fc2516e02f5
+uρ * Apipe
+
+# ╔═╡ bcb43f1e-99bc-46e6-96f4-6cfbcb9ce651
+function u0pipesolIG(ρ1,u1)
+	
+	function ∂p_∂ρ(T, ρ)
+		# specific gas constant for CO₂ [J/(kg·K)]
+		return m.r * T
+	    #return swdpdρ(ρ, T, 0)
+	end
+	function ∂p_∂T(T, ρ)
+		return m.r * ρ
+	    #return swdpdT(ρ, T, 0)
+	end
+	# Define the ODE system: du/dx = RHS
+	function du_dx!(du, u, p, x)
+	    ρ = ρ1 * u1 / u[1]
+	    T = T1 - Γ * x
+	    dpdrho = ∂p_∂ρ(T, ρ)
+	    dpdT = ∂p_∂T(T, ρ)
+	    factor = 1 - (dpdrho / u[1]^2)
+	    rhs = (-g / u[1]) +fric * u[1] - (1 / (ρ1 * u1)) * dpdT * (-Γ)
+	    du[1] = rhs / factor
+	end
+           # Initial temperature [K]
+	xspan = (0.0, Z)     # Spatial domain
+	u_init = [u1]
+	
+	# Solve ODE
+	prob = ODEProblem(du_dx!, u_init, xspan)
+	sol = solve(prob, TRBDF2(), reltol=1e-8, abstol=1e-8)
+
+	return sol(Z)[1]
+end
+
+# ╔═╡ c0011544-9db1-4118-81ea-3c7e7b6f9c60
+function u0pipesolSW(ρ1,u1)
+	
+	function ∂p_∂ρ(T, ρ)
+		# specific gas constant for CO₂ [J/(kg·K)]
+		#return m.r * T
+	    return swdpdρ(ρ, T, 1)
+	end
+	function ∂p_∂T(T, ρ)
+		#return m.r * ρ
+	    return swdpdT(ρ, T, 1)
+	end
+	# Define the ODE system: du/dx = RHS
+	function du_dx!(du, u, p, x)
+	    ρ = ρ1 * u1 / u[1]
+	    T = T1 - Γ * x
+	    dpdrho = ∂p_∂ρ(T, ρ)
+	    dpdT = ∂p_∂T(T, ρ)
+	    factor = 1 - (dpdrho / u[1]^2)
+	    rhs = (-g / u[1]) +fric * u[1] - (1 / (ρ1 * u1)) * dpdT * (-Γ)
+	    du[1] = rhs / factor
+	end
+           # Initial temperature [K]
+	xspan = (0.0, Z)     # Spatial domain
+	u_init = [u1]
+	
+	# Solve ODE
+	prob = ODEProblem(du_dx!, u_init, xspan)
+	sol = solve(prob, TRBDF2(), reltol=1e-8, abstol=1e-8)
+
+	return sol(Z)[1]
+end
+
+# ╔═╡ 5b9cdf42-536d-40a1-a595-1bb5c6da0fc1
+
+
+# ╔═╡ dec0731a-7cdc-4532-b871-632fbc136378
+begin
+uρtIG = [min(1, t/rampup) * uρ for t in pbhIG.time[2:end]]
+p1IG =  pbhIG.p_bh[2:end]
+ρ1IG =  p1IG / (m.r * T1)
+u1IG = uρ ./ρ1IG
+u0IG = [u0pipesolIG(el[1], el[2]) for el in zip(ρ1IG,u1IG)]
+ρ0IG = uρ ./u0IG
+p0IG = ρ0IG .* m.r * T0
+	
+uρtSW = [min(1, t/rampup) * uρ for t in pbhSW.time[2:end]]
+p1SW = pbhSW.p_bh[2:end]
+ρ1SW = [maximum(swdenco2(p1, T1)) for p1 in p1SW]
+u1SW = uρ ./ρ1SW
+u0SW = [u0pipesolSW(el[1], el[2]) for el in zip(ρ1SW,u1SW)]
+ρ0SW = uρ ./u0SW
+p0SW = [swpco2(ρ0,T1) for ρ0 in ρ0SW]
+end
+
+# ╔═╡ fd87f76f-d36b-4901-997c-101b8e65e383
+@btime [u0pipesolIG(el[1], el[2]) for el in zip(ρ1IG,u1IG)]
+
+# ╔═╡ 15c2b791-0aec-4c04-8b0a-ea5e8fc97aff
+@btime [u0pipesolSW(el[1], el[2]) for el in zip(ρ1SW,u1SW)]
+
+# ╔═╡ ce4d20a9-cec7-42de-9d8b-178adbc23845
+uρtSW
+
+# ╔═╡ 23d5adf3-9ecb-4391-8b68-c4f7f8467508
+maximum(p1SW)
+
+# ╔═╡ ec3542e1-c927-42be-b8a5-85f723cdc935
+begin
+	plot(pbhIG.time[2:end],p0IG, xscale=:log10)
+	plot!(pbhIG.time[2:end],p1IG, xscale=:log10)
+end
+
+# ╔═╡ a6a43f13-0870-411d-8a2f-b356d0815d8a
+begin
+	
+	
+	plot(pbhIG.time[2:end],p1IG./1e6, xscale=:log10, label = "Ideal Gas p1(t)")
+	plot!(pbhIG.time[2:end],p0IG./1e6, xscale=:log10, label = "Ideal Gas p0(t)")
+
+	plot!(pbhSW.time[2:end],p1SW./1e6,color="orange", label = "Span-Wagner p1(t)")
+	plot!(pbhSW.time[2:end],p0SW./1e6, xscale=:log10, label = "Span-Wagner p0(t)", title = "Required p0(t) and p1(t) with ramping up mass flux", xlabel = "time (s)", ylabel = "MPa")
+end
+
+# ╔═╡ bf490612-02d8-4b58-bb74-73d5b95ed07c
+ρ1IG
+
+# ╔═╡ 0230b57f-5306-45dc-a89d-2e901028b296
+begin
+	plot(pbhSW.time[2:end], p1SW)
+	plot!(pbhIG.time[2:end] , p1IG, xscale = :log10)
+end
+
+# ╔═╡ 52295a3c-8d25-43ca-82e8-5f41fe26f702
+
+
+# ╔═╡ 20aeff76-c687-4956-9003-786e7e41a877
+maximum(p1SW)
+
+# ╔═╡ c3e5ff92-ee51-4472-a432-7bc7c8f8233e
+begin
+	plot(ρ1SW)
+	plot!(ρ1IG)
+end
+
+# ╔═╡ a056e7d2-ab57-462c-a6ce-5ad9339b86fd
+begin
+	plot(pbhSW.time[2:end], ρ1SW, label = "Span-Wagner")
+	plot!(pbhIG.time[2:end] , ρ1IG, xscale = :log10, label = "Ideal Gas", ylabel = "ρ1(kg/m^3)", xlabel = "time(s)")
+end
+
+# ╔═╡ 9751c8fe-bac2-48a8-93bf-444d1700a785
+begin
+	plot(pbhSW.time[2:end], p1SW./ρ1SW, label = "Span-Wagner")
+	plot!(pbhIG.time[2:end] , p1IG./ρ1IG, xscale = :log10, label = "Ideal Gas", ylabel = "p1/ρ1", xlabel = "time(s)")
+end
+
+# ╔═╡ cd7de5ea-2e32-4d8e-89f4-50d6cbb3b243
+
+
+# ╔═╡ 1719b13b-87ce-4b54-92a0-910869f5d5e7
+function propheatmapSW(prop, timesteps; plotme=true)
+		
+		#plot(xlabel = "time", ylabel = "radius", yscale = :log10, right_margin = 10mm)
+		allgas=[]
+		radii=[]
+		for t in 1:timesteps
+			file=("000" * string(t))[end-3:end]
+			curtime = CSV.read("projects/bluefin/problems/Laforce/2D_SWFluid_csv_ptsuss_"*file*".csv", comment="#", DataFrame)
+			push!(radii, curtime.x)
+			push!(allgas, curtime[!, prop])
+
+		end
+		(allgas)
+		
+		allgas=hcat(allgas...)
+		if !(plotme)
+			return times,radii,allgas
+		end
+		#heatmap!(times[2:timesteps+1], radii[:], allgas[:,:], title = names * " " * prop)
+		
+		return allgas
+		
+
+end
+
+# ╔═╡ b4bf2262-7fe3-4a79-b8ea-c8d69ba7e17a
+function propheatmapIdeal(prop, timesteps; plotme=true)
+		
+		#plot(xlabel = "time", ylabel = "radius", yscale = :log10, right_margin = 10mm)
+		allgas=[]
+		radii=[]
+		for t in 1:timesteps
+			file=("000" * string(t))[end-3:end]
+			curtime = CSV.read("projects/bluefin//problems/Laforce/2D_IdealFluid_csv_ptsuss_"*file*".csv", comment="#", DataFrame)
+			push!(radii, curtime.x)
+			push!(allgas, curtime[!, prop])
+
+		end
+		(allgas)
+		
+		allgas=hcat(allgas...)
+		if !(plotme)
+			return times,radii,allgas
+		end
+		#heatmap!(times[2:timesteps+1], radii[:], allgas[:,:], title = names * " " * prop)
+		
+		return allgas
+		
+
+end
+
+# ╔═╡ c92bb425-d829-4a9f-96d7-274d90dfafd2
+begin
+	sgasideal=propheatmapIdeal("sgas", 202)
+	sgasSW = propheatmapSW("sgas", 185)
+
+	pwaterideal=propheatmapIdeal("pwater", 202)
+	pwaterSW = propheatmapSW("pwater", 185)
+
+	dpdzideal = (pwaterideal[2,:] - pwaterideal[1,:]) /(1.109090909 - 0.1)
+	dpdzSW = (pwaterSW[2,:] - pwaterSW[1,:]) /(1.109090909 - 0.1)
+end
+
+# ╔═╡ d6ee864d-601d-48ad-8a73-8aedbe791feb
+begin
+	plot(pbhSW.time[2:end], dpdzSW ./ 1e6, label = "Span-Wagner")
+	plot!(pbhIG.time[2:end] , dpdzideal ./ 1e6, xscale = :log10, label = "Ideal Gas", ylabel = "(dp/dr)1 (MPa / m)", xlabel = "time(s)")
+end
+
+# ╔═╡ ebab039a-71e8-4b58-9d84-6303c2c892d1
+m.r * 301
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
-LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
 [compat]
+BenchmarkTools = "~1.5.0"
+CSV = "~0.10.15"
+DataFrames = "~1.7.0"
 DifferentialEquations = "~7.15.0"
 Plots = "~1.40.9"
+PlutoUI = "~0.7.60"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -129,7 +571,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.3"
 manifest_format = "2.0"
-project_hash = "e2d245cd20d6cece54605fa2662907cfdd7e05c3"
+project_hash = "36187d6754929d0291462c61daaa3eab5d37f302"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "72af59f5b8f09faee36b4ec48e014a79210f2f4f"
@@ -141,6 +583,12 @@ weakdeps = ["ChainRulesCore", "ConstructionBase", "EnzymeCore"]
     ADTypesChainRulesCoreExt = "ChainRulesCore"
     ADTypesConstructionBaseExt = "ConstructionBase"
     ADTypesEnzymeCoreExt = "EnzymeCore"
+
+[[deps.AbstractPlutoDingetjes]]
+deps = ["Pkg"]
+git-tree-sha1 = "6e1d2a35f2f90a4bc7c2ed98079b2ba09c35b83a"
+uuid = "6e696c72-6542-2067-7265-42206c756150"
+version = "1.3.2"
 
 [[deps.Accessors]]
 deps = ["CompositionsBase", "ConstructionBase", "InverseFunctions", "LinearAlgebra", "MacroTools", "Markdown"]
@@ -251,6 +699,12 @@ weakdeps = ["SparseArrays"]
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
+[[deps.BenchmarkTools]]
+deps = ["JSON", "Logging", "Printf", "Profile", "Statistics", "UUIDs"]
+git-tree-sha1 = "f1dff6729bc61f4d49e140da1af55dcd1ac97b2f"
+uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+version = "1.5.0"
+
 [[deps.BitFlags]]
 git-tree-sha1 = "0691e34b3bb8be9307330f88d1a3c3f25466c24d"
 uuid = "d1d4a3ce-64b1-5f1a-9ba4-7e7e69966f35"
@@ -315,6 +769,12 @@ git-tree-sha1 = "5a97e67919535d6841172016c9530fd69494e5ec"
 uuid = "2a0fbf3d-bb9c-48f3-b0a9-814d99fd7ab9"
 version = "0.2.6"
 
+[[deps.CSV]]
+deps = ["CodecZlib", "Dates", "FilePathsBase", "InlineStrings", "Mmap", "Parsers", "PooledArrays", "PrecompileTools", "SentinelArrays", "Tables", "Unicode", "WeakRefStrings", "WorkerUtilities"]
+git-tree-sha1 = "deddd8725e5e1cc49ee205a1964256043720a6c3"
+uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+version = "0.10.15"
+
 [[deps.Cairo_jll]]
 deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "JLLWrappers", "LZO_jll", "Libdl", "Pixman_jll", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
 git-tree-sha1 = "009060c9a6168704143100f36ab08f06c2af4642"
@@ -356,21 +816,15 @@ version = "3.27.1"
 
 [[deps.ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
-git-tree-sha1 = "c7acce7a7e1078a20a285211dd73cd3941a871d6"
+git-tree-sha1 = "b10d0b65641d57b8b4d5e234446582de5047050d"
 uuid = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
-version = "0.12.0"
-
-    [deps.ColorTypes.extensions]
-    StyledStringsExt = "StyledStrings"
-
-    [deps.ColorTypes.weakdeps]
-    StyledStrings = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
+version = "0.11.5"
 
 [[deps.ColorVectorSpace]]
 deps = ["ColorTypes", "FixedPointNumbers", "LinearAlgebra", "Requires", "Statistics", "TensorCore"]
-git-tree-sha1 = "8b3b6f87ce8f65a2b4f857528fd8d70086cd72b1"
+git-tree-sha1 = "a1f44953f2382ebb937d60dafbe2deea4bd23249"
 uuid = "c3611d14-8923-5661-9e6a-0046d554d3a4"
-version = "0.11.0"
+version = "0.10.0"
 weakdeps = ["SpecialFunctions"]
 
     [deps.ColorVectorSpace.extensions]
@@ -459,10 +913,21 @@ git-tree-sha1 = "fcbb72b032692610bfbdb15018ac16a36cf2e406"
 uuid = "adafc99b-e345-5852-983c-f28acb93d879"
 version = "0.3.1"
 
+[[deps.Crayons]]
+git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
+uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
+version = "4.1.1"
+
 [[deps.DataAPI]]
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 version = "1.16.0"
+
+[[deps.DataFrames]]
+deps = ["Compat", "DataAPI", "DataStructures", "Future", "InlineStrings", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrecompileTools", "PrettyTables", "Printf", "Random", "Reexport", "SentinelArrays", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
+git-tree-sha1 = "fb61b4812c49343d7ef0b533ba982c46021938a6"
+uuid = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+version = "1.7.0"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
@@ -760,6 +1225,17 @@ version = "1.1.1"
     ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
     Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 
+[[deps.FilePathsBase]]
+deps = ["Compat", "Dates"]
+git-tree-sha1 = "7878ff7172a8e6beedd1dea14bd27c3c6340d361"
+uuid = "48062228-2e41-5def-b9a4-89aafe57970f"
+version = "0.9.22"
+weakdeps = ["Mmap", "Test"]
+
+    [deps.FilePathsBase.extensions]
+    FilePathsBaseMmapExt = "Mmap"
+    FilePathsBaseTestExt = "Test"
+
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 
@@ -942,6 +1418,24 @@ git-tree-sha1 = "b1c2585431c382e3fe5805874bda6aea90a95de9"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 version = "0.3.25"
 
+[[deps.Hyperscript]]
+deps = ["Test"]
+git-tree-sha1 = "179267cfa5e712760cd43dcae385d7ea90cc25a4"
+uuid = "47d2ed2b-36de-50cf-bf87-49c2cf4b8b91"
+version = "0.0.5"
+
+[[deps.HypertextLiteral]]
+deps = ["Tricks"]
+git-tree-sha1 = "7134810b1afce04bbc1045ca1985fbe81ce17653"
+uuid = "ac1192a8-f4b3-4bfe-ba22-af5b92cd3ab2"
+version = "0.9.5"
+
+[[deps.IOCapture]]
+deps = ["Logging", "Random"]
+git-tree-sha1 = "b6d6bfdd7ce25b0f9b2f6b3dd56b2673a66c8770"
+uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
+version = "0.2.5"
+
 [[deps.IfElse]]
 git-tree-sha1 = "debdd00ffef04665ccbb3e150747a77560e8fad1"
 uuid = "615f187c-cbe4-4ef1-ba3b-2fcf58d6d173"
@@ -951,6 +1445,19 @@ version = "0.1.1"
 git-tree-sha1 = "d1b1b796e47d94588b3757fe84fbf65a5ec4a80d"
 uuid = "d25df0c9-e2be-5dd7-82c8-3ad0b3e990b9"
 version = "0.1.5"
+
+[[deps.InlineStrings]]
+git-tree-sha1 = "45521d31238e87ee9f9732561bfee12d4eebd52d"
+uuid = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
+version = "1.4.2"
+
+    [deps.InlineStrings.extensions]
+    ArrowTypesExt = "ArrowTypes"
+    ParsersExt = "Parsers"
+
+    [deps.InlineStrings.weakdeps]
+    ArrowTypes = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
+    Parsers = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 
 [[deps.IntelOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl"]
@@ -971,6 +1478,11 @@ weakdeps = ["Dates", "Test"]
     [deps.InverseFunctions.extensions]
     InverseFunctionsDatesExt = "Dates"
     InverseFunctionsTestExt = "Test"
+
+[[deps.InvertedIndices]]
+git-tree-sha1 = "0dc7b50b8d436461be01300fd8cd45aa0274b038"
+uuid = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
+version = "1.3.0"
 
 [[deps.IrrationalConstants]]
 git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
@@ -1270,6 +1782,11 @@ weakdeps = ["ChainRulesCore", "ForwardDiff", "SpecialFunctions"]
     [deps.LoopVectorization.extensions]
     ForwardDiffExt = ["ChainRulesCore", "ForwardDiff"]
     SpecialFunctionsExt = "SpecialFunctions"
+
+[[deps.MIMEs]]
+git-tree-sha1 = "65f28ad4b594aebe22157d6fac869786a255b7eb"
+uuid = "6c6e2e6c-3030-632d-7369-2d6c69616d65"
+version = "0.1.4"
 
 [[deps.MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "oneTBB_jll"]
@@ -1762,6 +2279,12 @@ version = "1.40.9"
     ImageInTerminal = "d8c32880-2388-543b-8c61-d9f865259254"
     Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
+[[deps.PlutoUI]]
+deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
+git-tree-sha1 = "eba4810d5e6a01f612b948c9fa94f905b49087b0"
+uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+version = "0.7.60"
+
 [[deps.PoissonRandom]]
 deps = ["Random"]
 git-tree-sha1 = "a0f1159c33f846aa77c3f30ebbc69795e5327152"
@@ -1779,6 +2302,12 @@ deps = ["BitTwiddlingConvenienceFunctions", "CPUSummary", "IfElse", "Static", "T
 git-tree-sha1 = "645bed98cd47f72f67316fd42fc47dee771aefcd"
 uuid = "1d0040c9-8b98-4ee7-8388-3f51789ca0ad"
 version = "0.2.2"
+
+[[deps.PooledArrays]]
+deps = ["DataAPI", "Future"]
+git-tree-sha1 = "36d8b4b899628fb92c2749eb488d884a926614d3"
+uuid = "2dfb63ee-cc39-5dd5-95bd-886bf059d720"
+version = "1.4.3"
 
 [[deps.PositiveFactorizations]]
 deps = ["LinearAlgebra"]
@@ -1810,9 +2339,19 @@ git-tree-sha1 = "9306f6085165d270f7e3db02af26a400d580f5c6"
 uuid = "21216c6a-2e73-6563-6e65-726566657250"
 version = "1.4.3"
 
+[[deps.PrettyTables]]
+deps = ["Crayons", "LaTeXStrings", "Markdown", "PrecompileTools", "Printf", "Reexport", "StringManipulation", "Tables"]
+git-tree-sha1 = "1101cd475833706e4d0e7b122218257178f48f34"
+uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
+version = "2.4.0"
+
 [[deps.Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+
+[[deps.Profile]]
+deps = ["Printf"]
+uuid = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
 
 [[deps.PtrArrays]]
 git-tree-sha1 = "77a42d78b6a92df47ab37e177b2deac405e1c88f"
@@ -2030,6 +2569,12 @@ deps = ["Dates"]
 git-tree-sha1 = "3bac05bc7e74a75fd9cba4295cde4045d9fe2386"
 uuid = "6c6a2e73-6563-6170-7368-637461726353"
 version = "1.2.1"
+
+[[deps.SentinelArrays]]
+deps = ["Dates", "Random"]
+git-tree-sha1 = "d0553ce4031a081cc42387a9b9c8441b7d99f32d"
+uuid = "91c51154-3ec4-41a3-a24f-3f23e20d615c"
+version = "1.4.7"
 
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
@@ -2249,6 +2794,12 @@ git-tree-sha1 = "f35f6ab602df8413a50c4a25ca14de821e8605fb"
 uuid = "7792a7ef-975c-4747-a70f-980b88e8d1da"
 version = "0.5.7"
 
+[[deps.StringManipulation]]
+deps = ["PrecompileTools"]
+git-tree-sha1 = "a6b1675a536c5ad1a60e5a5153e1fee12eb146e3"
+uuid = "892a3eda-7b42-436c-8928-eab12a02cf0e"
+version = "0.4.0"
+
 [[deps.SuiteSparse]]
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
 uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
@@ -2331,6 +2882,11 @@ git-tree-sha1 = "be986ad9dac14888ba338c2554dcfec6939e1393"
 uuid = "d5829a12-d9aa-46ab-831f-fb7c9ab06edf"
 version = "0.2.1"
 
+[[deps.Tricks]]
+git-tree-sha1 = "7822b97e99a1672bfb1b49b668a6d46d58d8cbcb"
+uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
+version = "0.1.9"
+
 [[deps.TruncatedStacktraces]]
 deps = ["InteractiveUtils", "MacroTools", "Preferences"]
 git-tree-sha1 = "ea3e54c2bdde39062abf5a9758a23735558705e1"
@@ -2411,6 +2967,17 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "93f43ab61b16ddfb2fd3bb13b3ce241cafb0e6c9"
 uuid = "2381bf8a-dfd0-557d-9999-79630e7b1b91"
 version = "1.31.0+0"
+
+[[deps.WeakRefStrings]]
+deps = ["DataAPI", "InlineStrings", "Parsers"]
+git-tree-sha1 = "b1be2855ed9ed8eac54e5caff2afcdb442d52c23"
+uuid = "ea10d353-3f73-51f8-a26c-33c1cb351aa5"
+version = "1.4.2"
+
+[[deps.WorkerUtilities]]
+git-tree-sha1 = "cd1659ba0d57b71a464a29e64dbc67cfe83d54e7"
+uuid = "76eceee3-57b5-4d4a-8e66-0e911cebbf60"
+version = "1.6.1"
 
 [[deps.XML2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Zlib_jll"]
@@ -2698,8 +3265,37 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╠═a1facde9-530e-4520-b115-81489125b6dd
-# ╠═b32f9216-a1eb-11ef-2859-cd7714c5243f
-# ╠═4488046e-c212-4845-8e56-6d706cb96889
+# ╠═dd191d6e-27b4-11f0-2350-33f8e64f08e2
+# ╠═ba838e3b-1fe6-493a-863f-39a28445644a
+# ╠═7e1f7738-c3aa-46d8-813a-9fc195d7e73d
+# ╠═8db7494c-7ca9-4c1d-84cb-42397063fed7
+# ╠═714d1819-4a27-4c57-a250-f1c74f11e3ca
+# ╠═da9b4fd3-e439-47f4-bce6-50a8404abea4
+# ╠═a0218a0d-bba3-4129-ae4d-669f10c782b8
+# ╠═b9e3cd2c-0650-40ed-a554-6fc2516e02f5
+# ╠═bcb43f1e-99bc-46e6-96f4-6cfbcb9ce651
+# ╠═c0011544-9db1-4118-81ea-3c7e7b6f9c60
+# ╠═5b9cdf42-536d-40a1-a595-1bb5c6da0fc1
+# ╠═dec0731a-7cdc-4532-b871-632fbc136378
+# ╠═6e3cd9fa-42ba-4620-9f77-f068799196f4
+# ╠═fd87f76f-d36b-4901-997c-101b8e65e383
+# ╠═15c2b791-0aec-4c04-8b0a-ea5e8fc97aff
+# ╠═ce4d20a9-cec7-42de-9d8b-178adbc23845
+# ╠═23d5adf3-9ecb-4391-8b68-c4f7f8467508
+# ╠═ec3542e1-c927-42be-b8a5-85f723cdc935
+# ╠═a6a43f13-0870-411d-8a2f-b356d0815d8a
+# ╠═bf490612-02d8-4b58-bb74-73d5b95ed07c
+# ╠═0230b57f-5306-45dc-a89d-2e901028b296
+# ╠═52295a3c-8d25-43ca-82e8-5f41fe26f702
+# ╠═20aeff76-c687-4956-9003-786e7e41a877
+# ╠═c3e5ff92-ee51-4472-a432-7bc7c8f8233e
+# ╠═a056e7d2-ab57-462c-a6ce-5ad9339b86fd
+# ╠═9751c8fe-bac2-48a8-93bf-444d1700a785
+# ╠═c92bb425-d829-4a9f-96d7-274d90dfafd2
+# ╠═d6ee864d-601d-48ad-8a73-8aedbe791feb
+# ╠═cd7de5ea-2e32-4d8e-89f4-50d6cbb3b243
+# ╠═1719b13b-87ce-4b54-92a0-910869f5d5e7
+# ╠═b4bf2262-7fe3-4a79-b8ea-c8d69ba7e17a
+# ╠═ebab039a-71e8-4b58-9d84-6303c2c892d1
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

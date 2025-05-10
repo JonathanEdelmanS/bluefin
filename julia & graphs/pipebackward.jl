@@ -4,123 +4,878 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ a1facde9-530e-4520-b115-81489125b6dd
+# ╔═╡ e5ac7e84-23cd-11f0-34db-cff1405469fc
+using DifferentialEquations, Plots, PlutoUI
+
+
+# ╔═╡ caebae43-84d6-42e6-9f9b-bbc333f51bc9
+module m
+	    # critical terms and values for CO2
+	    tc = 304.1282;              # critical temperature in K
+	    pc = 7.3773;                # critical pressure in MPa
+	    rhoceos = 446.62;           # critical density in kg/m3
+	    rhoc = 467.6;               # critical density in kg/m3
+	    rmol = 8.314510;            # molar gas constant in j/mol/k
+	    molwt = 44.0098;            # molecular weight in g/mol
+	    r = rmol/molwt * 1e3;             # specific gas constant in j/kg/K
+	    # n constants
+	    n1 = 0.89875108; n2 = -2.1281985; n3 = -0.068190320; n4 = 0.076355306;
+	    n5 = 0.00022053253; n6 = 0.41541823; n7 = 0.71335657; n8 = 0.00030354234;
+	    n9 = -0.36643143; n10 = -0.0014407781; n11 = -0.089166707; n12 = -0.023699887;
+	    # d constants
+	    d1 = 1.00; d2 = 1.00; d3 = 1.00; d4 = 3.00; d5 = 7.00; d6 = 1.00;
+	    d7 = 2.00; d8 = 5.00; d9 = 1.00; d10 = 1.00; d11 = 4.00; d12 = 2.00;
+	    # t constants
+	    t1 = 0.25; t2 = 1.25; t3 = 1.50; t4 = 0.25; t5 = 0.875; t6 = 2.375; t7 = 2.00;
+	    t8 = 2.125; t9 = 3.50; t10 = 6.50; t11 = 4.75; t12 = 12.50;
+	    # p constants
+	    p6 = 1.0; p7 = 1.0; p8 = 1.0; p9 = 2.0; p10 = 2.0; p11 = 2.0; p12 = 3.0;
+	    # a constants
+	    a1 = 8.37304456; a2 = -3.70454304; a3 = 2.5; a4 = 1.99427042;
+	    a5 = 0.62105248; a6 = 0.41195293; a7 = 1.04028922; a8 = 0.08327678;
+	    # theta constants
+	    th4 = 3.15163; th5 = 6.1119; th6 = 6.77708; th7 = 11.32384; th8 = 27.08792;
+	end
+
+# ╔═╡ a2feddd2-5abe-4504-b188-3ccb45539c3a
 begin
-	using LinearAlgebra
-	using DifferentialEquations
-	using Plots
+	#--------------------------------------------------------------------------
+	# All the subsequent functions are calculated based on equations from span
+	# wagner book/ papers (reduced form and full form)
+	    # Function to calculate alpha residual
+	    function alfr(tau,del)
+	        alphar1 = m.n1*del^m.d1*tau^m.t1+m.n2*del^m.d2*tau^m.t2+m.n3*del^m.d3*tau^m.t3+m.n4*del^m.d4*tau^m.t4+m.n5*del^m.d5*tau^m.t5;
+	        alphar2 = m.n6*del^m.d6*tau^m.t6*exp(-del^m.p6)+m.n7*del^m.d7*tau^m.t7*exp(-del^m.p7);
+	        alphar3 = m.n8*del^m.d8*tau^m.t8*exp(-del^m.p8)+m.n9*del^m.d9*tau^m.t9*exp(-del^m.p9)+m.n10*del^m.d10*tau^m.t10*exp(-del^m.p10);
+	        alphar4 = m.n11*del^m.d11*tau^m.t11*exp(-del^m.p11)+m.n12*del^m.d12*tau^m.t12*exp(-del^m.p12);
+	        alphar = alphar1+alphar2+alphar3+alphar4;
+	        return alphar
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate differential of alpha residual w.r.t delta
+	    function dalfrdel(tau,del)
+	        alphar1 = m.n1*m.d1*del^(m.d1-1.0)*tau^m.t1+m.n2*m.d2*del^(m.d2-1.0)*tau^m.t2+m.n3*m.d3*del^(m.d3-1.0)*tau^m.t3;
+	        alphar2 = m.n4*m.d4*del^(m.d4-1.0)*tau^m.t4+m.n5*m.d5*del^(m.d5-1.0)*tau^m.t5;
+	        alphar3 = m.n6*del^(m.d6-1.0)*(m.d6-m.p6*del^m.p6)*tau^m.t6*exp(-del^m.p6)+m.n7*del^(m.d7-1.0)*(m.d7-m.p7*del^m.p7)*tau^m.t7*exp(-del^m.p7);
+	        alphar4 = m.n8*del^(m.d8-1.0)*(m.d8-m.p8*del^m.p8)*tau^m.t8*exp(-del^m.p8)+m.n9*del^(m.d9-1.0)*(m.d9-m.p9*del^m.p9)*tau^m.t9*exp(-del^m.p9);
+	        alphar5 = m.n10*del^(m.d10-1.0)*(m.d10-m.p10*del^m.p10)*tau^m.t10*exp(-del^m.p10)+m.n11*del^(m.d11-1.0)*(m.d11-m.p11*del^m.p11)*tau^m.t11*exp(-del^m.p11);
+	        alphar6 = m.n12*del^(m.d12-1.0)*(m.d12-m.p12*del^m.p12)*tau^m.t12*exp(-del^m.p12);
+	        alphar = alphar1+alphar2+alphar3+alphar4+alphar5+alphar6;
+	        return alphar
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate  double differential of alpha residual w.r.t delta
+	    function d2alfrdel(tau,del)
+	        alphar1 = m.n1*m.d1*(m.d1-1.0)*del^(m.d1-2.0)*tau^m.t1+m.n2*m.d2*(m.d2-1.0)*del^(m.d2-2.0)*tau^m.t2+m.n3*m.d3*(m.d3-1.0)*del^(m.d3-2.0)*tau^m.t3;
+	        alphar2 = m.n4*m.d4*(m.d4-1.0)*del^(m.d4-2.0)*tau^m.t4+m.n5*m.d5*(m.d5-1.0)*del^(m.d5-2.0)*tau^m.t5;
+	        alphar6 = m.n6*del^(m.d6-2.0)*((m.d6-m.p6*del^m.p6)*(m.d6-1.0-m.p6*del^m.p6)-m.p6^2.0*del^m.p6)*tau^m.t6*exp(-del^m.p6);
+	        alphar7 = m.n7*del^(m.d7-2.0)*((m.d7-m.p7*del^m.p7)*(m.d7-1.0-m.p7*del^m.p7)-m.p7^2.0*del^m.p7)*tau^m.t7*exp(-del^m.p7);
+	        alphar8 = m.n8*del^(m.d8-2.0)*((m.d8-m.p8*del^m.p8)*(m.d8-1.0-m.p8*del^m.p8)-m.p8^2.0*del^m.p8)*tau^m.t8*exp(-del^m.p8);
+	        alphar9 = m.n9*del^(m.d9-2.0)*((m.d9-m.p9*del^m.p9)*(m.d9-1.0-m.p9*del^m.p9)-m.p9^2.0*del^m.p9)*tau^m.t9*exp(-del^m.p9);
+	        alphar10 = m.n10*del^(m.d10-2.0)*((m.d10-m.p10*del^m.p10)*(m.d10-1.0-m.p10*del^m.p10)-m.p10^2.0*del^m.p10)*tau^m.t10*exp(-del^m.p10);
+	        alphar11 = m.n11*del^(m.d11-2.0)*((m.d11-m.p11*del^m.p11)*(m.d11-1.0-m.p11*del^m.p11)-m.p11^2.0*del^m.p11)*tau^m.t11*exp(-del^m.p11);
+	        alphar12 = m.n12*del^(m.d12-2.0)*((m.d12-m.p12*del^m.p12)*(m.d12-1.0-m.p12*del^m.p12)-m.p12^2.0*del^m.p12)*tau^m.t12*exp(-del^m.p12);
+	        alphar = alphar1+alphar2+alphar6+alphar7+alphar8+alphar9+alphar10+alphar11+alphar12;
+	        return alphar;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate differential of alpha residual w.r.t tau
+	    function dalfrtau(tau,del)
+	        alphar1 = m.n1*m.t1*del^m.d1*tau^(m.t1-1.0)+m.n2*m.t2*del^m.d2*tau^(m.t2-1.0)+m.n3*m.t3*del^m.d3*tau^(m.t3-1.0);
+	        alphar2 = m.n4*m.t4*del^m.d4*tau^(m.t4-1.0)+m.n5*m.t5*del^m.d5*tau^(m.t5-1.0);
+	        alphar3 = m.n6*m.t6*del^m.d6*tau^(m.t6-1.0)*exp(-del^m.p6)+m.n7*m.t7*del^m.d7*tau^(m.t7-1.0)*exp(-del^m.p7);
+	        alphar4 = m.n8*m.t8*del^m.d8*tau^(m.t8-1.0)*exp(-del^m.p8)+m.n9*m.t9*del^m.d9*tau^(m.t9-1.0)*exp(-del^m.p9);
+	        alphar5 = m.n10*m.t10*del^m.d10*tau^(m.t10-1.0)*exp(-del^m.p10)+m.n11*m.t11*del^m.d11*tau^(m.t11-1.0)*exp(-del^m.p11);
+	        alphar6 = m.n12*m.t12*del^m.d12*tau^(m.t12-1.0)*exp(-del^m.p12);
+	        alphar = alphar1+alphar2+alphar3+alphar4+alphar5+alphar6;
+	        return alphar;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate double differential of alpha residual w.r.t tau
+	    function d2alfrtau(tau,del)
+	        alphar1 = m.n1*m.t1*(m.t1-1.0)*del^m.d1*tau^(m.t1-2.0)+m.n2*m.t2*(m.t2-1.0)*del^m.d2*tau^(m.t2-2.0)+m.n3*m.t3*(m.t3-1.0)*del^m.d3*tau^(m.t3-2.0);
+	        alphar2 = m.n4*m.t4*(m.t4-1.0)*del^m.d4*tau^(m.t4-2.0)+m.n5*m.t5*(m.t5-1.0)*del^m.d5*tau^(m.t5-2.0);
+	        alphar3 = m.n6*m.t6*(m.t6-1.0)*del^m.d6*tau^(m.t6-2.0)*exp(-del^m.p6)+m.n7*m.t7*(m.t7-1.0)*del^m.d7*tau^(m.t7-2.0)*exp(-del^m.p7);
+	        alphar4 = m.n8*m.t8*(m.t8-1.0)*del^m.d8*tau^(m.t8-2.0)*exp(-del^m.p8)+m.n9*m.t9*(m.t9-1.0)*del^m.d9*tau^(m.t9-2.0)*exp(-del^m.p9);
+	        alphar5 = m.n10*m.t10*(m.t10-1.0)*del^m.d10*tau^(m.t10-2.0)*exp(-del^m.p10)+m.n11*m.t11*(m.t11-1.0)*del^m.d11*tau^(m.t11-2.0)*exp(-del^m.p11);
+	        alphar6 = m.n12*m.t12*(m.t12-1.0)*del^m.d12*tau^(m.t12-2.0)*exp(-del^m.p12);
+	        alphar = alphar1+alphar2+alphar3+alphar4+alphar5+alphar6;
+	        return alphar;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate double differential of alpha residual w.r.t tau and delta
+	    function d2alfrdeltau(tau,del)
+	        alphar1 = m.n1*m.d1*m.t1*del^(m.d1-1.0)*tau^(m.t1-1.0)+m.n2*m.d2*m.t2*del^(m.d2-1.0)*tau^(m.t2-1.0)+m.n3*m.d3*m.t3*del^(m.d3-1.0)*tau^(m.t3-1.0);
+	        alphar2 = m.n4*m.d4*m.t4*del^(m.d4-1.0)*tau^(m.t4-1.0)+m.n5*m.d5*m.t5*del^(m.d5-1.0)*tau^(m.t5-1.0);
+	        alphar3 = m.n6*m.t6*del^(m.d6-1.0)*(m.d6-m.p6*del^m.p6)*tau^(m.t6-1.0)*exp(-del^m.p6)+m.n7*m.t7*del^(m.d7-1.0)*(m.d7-m.p7*del^m.p7)*tau^(m.t7-1.0)*exp(-del^m.p7);
+	        alphar4 = m.n8*m.t8*del^(m.d8-1.0)*(m.d8-m.p8*del^m.p8)*tau^(m.t8-1.0)*exp(-del^m.p8)+m.n9*m.t9*del^(m.d9-1.0)*(m.d9-m.p9*del^m.p9)*tau^(m.t9-1.0)*exp(-del^m.p9);
+	        alphar5 = m.n10*m.t10*del^(m.d10-1.0)*(m.d10-m.p10*del^m.p10)*tau^(m.t10-1.0)*exp(-del^m.p10)+m.n11*m.t11*del^(m.d11-1.0)*(m.d11-m.p11*del^m.p11)*tau^(m.t11-1.0)*exp(-del^m.p11);
+	        alphar6 = m.n12*m.t12*del^(m.d12-1.0)*(m.d12-m.p12*del^m.p12)*tau^(m.t12-1.0)*exp(-del^m.p12)
+	        alphar = alphar1+alphar2+alphar3+alphar4+alphar5+alphar6;
+	        return alphar;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate standard state alphao
+	    function alfo(tau,del)
+	        alphao1 = log(del)+m.a1+m.a2*tau+m.a3*log(tau);
+	        alphao2 = m.a4*log(1.0-exp(-tau*m.th4))+m.a5*log(1.0-exp(-tau*m.th5))+m.a6*log(1.0-exp(-tau*m.th6));
+	        alphao3 = m.a7*log(1.0-exp(-tau*m.th7))+m.a8*log(1.0-exp(-tau*m.th8));
+	        alphao = alphao1+alphao2+alphao2;
+	        return alphao
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate differential of alphao w.r.t tau
+	
+	    function dalfotau(tau,del)
+	        alphao1 = m.a2+m.a3/tau;
+	        alphao2 = m.a4*m.th4*(1.0/(1.0-exp(-tau*m.th4))-1.0)+m.a5*m.th5*(1.0/(1.0-exp(-tau*m.th5))-1.0)+m.a6*m.th6*(1.0/(1.0-exp(-tau*m.th6))-1.0);
+	        alphao3 = m.a7*m.th7*(1.0/(1.0-exp(-tau*m.th7))-1.0)+m.a8*m.th8*(1.0/(1.0-exp(-tau*m.th8))-1.0);
+	        alphao = alphao1+alphao2+alphao3;
+	        return alphao;
+	    end
+	
+	#--------------------------------------------------------------------------
+	    # Function to calculate double differential of alphao w.r.t tau
+	    function d2alfotau(tau,del)
+	        alphao1 = -m.a3/tau^2.0-m.a4*m.th4^2.0*exp(-tau*m.th4)*(1.0/(1.0-exp(-tau*m.th4))^2.0);
+	        alphao2 = m.a5*m.th5^2.0*exp(-tau*m.th5)*(1.0/(1.0-exp(-tau*m.th5))^2.0)+m.a6*m.th6^2.0*exp(-tau*m.th6)*(1.0/(1.0-exp(-tau*m.th6))^2.0);
+	        alphao3 = m.a7*m.th7^2.0*exp(-tau*m.th7)*(1.0/(1.0-exp(-tau*m.th7))^2.0)+m.a8*m.th8^2.0*exp(-tau*m.th8)*(1.0/(1.0-exp(-tau*m.th8))^2.0);
+	        alphao = alphao1-alphao2-alphao3;
+	        return alphao;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate differential of alphao w.r.t delta
+	    function dalfodel(tau,del)
+	        alphao = 1.0/del;
+	        return alphao;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate double differential of alphao w.r.t delta
+	    function d2alfodel(tau,del)
+	        alphao = -1.0/del^2.0;
+	        return alphao;
+	    end
+	#--------------------------------------------------------------------------
+	# Function to solve for density
+	# Newton-Raphson algorithm over del. Will generate two different
+	# results based on initial guesses.
+	function densol(p,t,dguess)
+	    count2 = 0;
+	    maxval = 100;
+	    dold = dguess;
+	    dnew = 0.1;
+	    tau = m.tc/t;
+	    tol = 1.0e-7;
+	    fold = (p/m.rhoc/dold/m.r/t)-1.0-dold*dalfrdel(tau,dold);
+	    fdash = -(p/m.rhoc/dold^2.0/m.r/t)-dalfrdel(tau,dold)-dold*d2alfrdel(tau,dold);
+	    for i in 1:maxval
+	        if dold < 0.0 || dold > 3.0
+	            if dguess < 1.0
+	                dnew = 0.4;
+	                count2 = count2 +1;
+	            else
+	                dnew = 1.3;
+	                count2 = count2 +1;
+	            end
+	        else
+	            dnew = dold-fold/fdash;
+	        end
+	        fnew = (p/m.rhoc/dnew/m.r/t)-1.0-dnew*dalfrdel(tau,dnew);
+	        fdash = -(p/m.rhoc/dnew^2.0/m.r/t)-dalfrdel(tau,dnew)-dnew*d2alfrdel(tau,dnew);
+	        if abs(fnew) < tol
+	            break
+	        else
+	            dold = dnew;
+	            fold = fnew;
+	        end
+	        if i == maxval || count2 == 2
+	            dnew = 10.0;
+	            break
+	        end
+	    end
+	    del = dnew;
+	    fugacity = exp(alfr(tau,del)+del*dalfrdel(tau,del)-log(1.0+del*dalfrdel(tau,del)));
+	    den = del*m.rhoc;
+	    return den, fugacity;
+	end
+	#--------------------------------------------------------------------------
+	# Phase equilibrium solver
+	function swdenco2(p,t)
+	    (deng, fugg) = densol(p,t,0.001);
+	    (denl, fugl) = densol(p,t,2.0);
+	    # Check if the densities are the same
+	    errd::Float64 = abs(deng-denl)::Float64;
+	    if errd < 1.0e-3
+	        if deng <= m.rhoceos
+	            fugl = 10000000.0;
+	        else
+	            fugg = 10000000.0;
+	        end
+	    end
+	    errf::Float64 = abs(fugg-fugl);
+	    if errf < 1.0e-7
+	        deng = deng;
+	        denl = denl;
+	    elseif fugg < fugl
+	        deng = deng;
+	        denl = 0.0;
+	    else
+	        deng = 0.0;
+	        denl = denl;
+	    end
+	    #den::Tuple{deng::Float64,::Float64};
+	    den = (deng,denl);      # density is in kg/m3
+	    #println("density = $den")
+	    return den;
+	end
+	#--------------------------------------------------------------------------
+	#Fugacity calculator
+	function swfugco2(p,t)
+	    den = swdenco2(p,t)
+	    tau = m.tc/t;
+	    del = den./m.rhoc;
+	    fugacity = zeros(2);
+	    for i in 1:2
+	        if del[i] == 0.0
+	            fugacity[i] = 0.0;
+	        else
+	            fugacity[i] = exp(alfr(tau,del[i])+del[i]*dalfrdel(tau,del[i])-log(1.0+del[i]*dalfrdel(tau,del[i])));
+	        end
+	    end
+	    return fugacity
+	end
+	#--------------------------------------------------------------------------
+	#joule-thomson coefficient
+	function swjt(p,t)
+	    den = swdenco2(p,t);
+	    tau = m.tc/t;
+	    del = den./m.rhoc;
+	    jt = zeros(2);
+	    for i in 1:2
+	        if del[i] == 0.0
+	            jt[i] = 0.0;
+	        else
+	            jt[i] = -1.005*1000.0*(1.0/m.r/den[i])*(del[i]*dalfrdel(tau,del[i])+del[i]^2.0*d2alfrdel(tau,del[i])+tau*del[i]*d2alfrdeltau(tau,del[i]))*((1.0+del[i]*dalfrdel(tau,del[i])-tau*del[i]*d2alfrdeltau(tau,del[i]))^2.0-tau^2.0*(d2alfotau(tau,del[i])+d2alfrtau(tau,del[i]))*(1.0+2.0*del[i]*dalfrdel(tau,del[i])+del[i]^2.0*d2alfrdel(tau,del[i])))^-1.0;
+	        end
+	    end
+	    jtout = (jt[1], jt[2]); # joule-thomson coefficient is in K/MPa
+	    return jtout
+	end
+	#--------------------------------------------------------------------------
 	
 end
 
-# ╔═╡ b32f9216-a1eb-11ef-2859-cd7714c5243f
+# ╔═╡ c6b76375-516f-4f8c-86d2-38f145a854ad
+densol(6.8e6,301,.0001)
+
+# ╔═╡ 4af8f8d5-9ce7-40d9-9cdd-8fc01810667e
+densol(6.8e6,301,2)
+
+# ╔═╡ 1bcd162b-0b4f-45f5-924a-04e88b3e7226
 begin
-	# Physical and gas properties for CO₂
-	const L = 10.0             # Length of the pipe (m)
-	const D = 0.1              # Diameter of the pipe (m)
-	const μ = 1.48e-5          # Dynamic viscosity of CO₂ (Pa·s)
-	const R_CO2 = 188.92       # Specific gas constant for CO₂ (J/(kg·K))
-	const γ = 1.3              # Heat capacity ratio for CO₂
-	const T_inlet = 300.0      # Inlet temperature (K)
-	const p_inlet = 5e5        # Inlet pressure (Pa)
-	const Cμ = 0.09            # Empirical constant for k-epsilon model
-	
-	# Grid and initial conditions
-	N = 100  # Number of grid points along the pipe length
-	dx = L / N
-	x = LinRange(0, L, N)
-	
-	# Initial profiles for variables: density (ρ), velocity (U), temperature (T), turbulent kinetic energy (k), and dissipation rate (ε)
-	ρ = fill(p_inlet / (R_CO2 * T_inlet), N)  # Initial density (using ideal gas law)
-	U = fill(10.0, N)                         # Initial velocity profile
-	T = fill(T_inlet, N)                      # Temperature profile
-	k = fill(1e-3, N)                         # Initial turbulent kinetic energy
-	ε = fill(1e-4, N)                         # Initial dissipation rate
-	
-	# Define the eddy viscosity function based on k-epsilon model
-	function eddy_viscosity(k, ε)
-	    return Cμ * k.^2 ./ ε
+	function swpco2(ρ,T, SW_Coef = 1)
+		tau = m.tc/T;
+		del = ρ/m.rhoc
+		return m.r * T * ρ * (1 + SW_Coef * del * dalfrdel(tau,del))
 	end
-	
-	# Define the equation of state for CO₂ (ideal gas)
-	function equation_of_state(ρ, T)
-	    return ρ .* R_CO2 .* T
+	function swdpdρ(ρ,T, SW_Coef = 1)
+		tau = m.tc/T;
+		del = ρ/m.rhoc
+		return (m.r* T * (1 + SW_Coef * del * dalfrdel(tau,del)) + SW_Coef * m.r * ρ * T *(dalfrdel(tau,del) + del * d2alfrdel(tau,del))/m.rhoc)
 	end
-	
-	# Define the governing equations in terms of ODEs for simplicity
-	function compressible_pipe_model!(du, u, p, t)
-	    ρ, U, T, k, ε = u[1:N], u[N+1:2N], u[2N+1:3N], u[3N+1:4N], u[4N+1:5N]
-	    νt = eddy_viscosity(k, ε)
-	
-	    # Calculate pressure using the ideal gas law
-	    p = equation_of_state(ρ, T)
-	
-	    # Calculate derivatives (using central differences)
-	    dρdx = diff(ρ) / dx
-	    dUdx = diff(U) / dx
-	    dTdx = diff(T) / dx
-	    dkdx = diff(k) / dx
-	    dedx = diff(ε) / dx
-	
-	    # Update density equation (mass continuity)
-	    for i in 2:N-1
-	        du[i] = -ρ[i] * dUdx[i] - U[i] * dρdx[i]
-	    end
-	
-	    # Update momentum equation
-	    for i in 2:N-1
-	        du[N+i] = -U[i] * dUdx[i] - (1/ρ[i]) * (p[i+1] - p[i-1]) / (2 * dx) + (μ + νt[i]) * (U[i+1] - 2*U[i] + U[i-1]) / dx^2
-	    end
-	
-	    # Update energy equation (temperature evolution)
-	    for i in 2:N-1
-	        du[2N+i] = -U[i] * dTdx[i] + (μ + νt[i]) * (T[i+1] - 2*T[i] + T[i-1]) / dx^2
-	    end
-	
-	    # Update turbulent kinetic energy equation
-	    for i in 2:N-1
-	        du[3N+i] = -U[i] * dkdx[i] + νt[i] * (k[i+1] - 2*k[i] + k[i-1]) / dx^2 - ε[i]
-	    end
-	
-	    # Update dissipation rate equation
-	    for i in 2:N-1
-	        du[4N+i] = -U[i] * dedx[i] + νt[i] * (ε[i+1] - 2*ε[i] + ε[i-1]) / dx^2 - ε[i]^2 / k[i]
-	    end
-	
-	    # Boundary conditions
-	    du[1] = ρ[1] - p_inlet / (R_CO2 * T_inlet)  # Inlet density condition
-	    du[N] = U[N]                                # Outlet velocity condition
-	    du[N+1] = U[1] - 10.0                       # Inlet velocity condition
-	    du[2N+1] = T[1] - T_inlet                   # Inlet temperature condition
+	function swdpdT(ρ,T, SW_Coef = 1)
+		tau = m.tc/T;
+		del = ρ/m.rhoc
+		return (m.r * ρ * (1 + SW_Coef * (del * dalfrdel(tau,del) - del * tau * d2alfrdeltau(tau,del))))
 	end
-	
-	# Initial condition vector
-	u0 = vcat(ρ, U, T, k, ε)
-	
-	# Time integration parameters
-	tspan = (0.0, 5.0)  # Simulate for 5 seconds
 end
 
-# ╔═╡ 4488046e-c212-4845-8e56-6d706cb96889
+# ╔═╡ eff8c145-3001-4d90-a5f9-d27c02bfc454
 begin
-	# Solve the system
-	prob = ODEProblem(compressible_pipe_model!, u0, tspan)
-	sol = solve(prob, Tsit5())
+	g=9.81 #m/s^2
+	p1 = 6.8e6 #6.8MPa bottom
+	T1 = 301 #K
+	#Γ = -.016 #K/m
+	Z = 550 #m
+	#T1 = T0 + Z * Γ
+	ρ1IG = p1 / (m.r * T1)
+	ρ1SW = maximum(swdenco2(p1, T1))
+	f = .1         # friction factor [1/m]
+	d = .2
+	fric = f/d
+	u1ρ1 = 400
+	u1SW = u1ρ1/ρ1SW
+	u1IG = u1ρ1/ρ1IG
+end
+
+# ╔═╡ 64c679d7-0bdb-4595-af9a-5991bad55a0c
+Γ0s = [.025, -.016,0,.016]
+
+# ╔═╡ 93a9dc7d-56ea-4327-829c-7678456c22da
+begin
+plot()
+
+solsIG = []
+
+for Γ in Γ0s
+ρ1 = ρ1IG
+u1 = u1IG
+			
+	function ∂p_∂ρ(T, ρ)
+		# specific gas constant for CO₂ [J/(kg·K)]
+		return m.r * T
+	    #return swdpdρ(ρ, T, 0)
+	end
+	function ∂p_∂T(T, ρ)
+		return m.r * ρ
+	    #return swdpdT(ρ, T, 0)
+	end
+	# Define the ODE system: du/dx = RHS
+	function du_dx!(du, u, p, x)
+		g=9.81
+	    ρ = ρ1 * u1 / u[1]
+	    T = T1 - Γ * x
+	    dpdrho = ∂p_∂ρ(T, ρ)
+	    dpdT = ∂p_∂T(T, ρ)
+	    factor = 1 - (dpdrho / u[1]^2)
+	    rhs = (-g / u[1]) +fric * u[1] - (1 / (ρ1 * u1)) * dpdT * (-Γ)
+	    du[1] = rhs / factor
+	end
+	# Initial conditions
+	#T₀ = 300.0              # Initial temperature [K]
+	xspan = (0.0, Z)     # Spatial domain
+	u_init = [u1]
 	
-	# Plot results (requires Plots.jl)
-	plot(x, sol[1:N, end], xlabel="Distance (m)", ylabel="Density (kg/m³)", title="Density Profile")
+	# Solve ODE
+	prob = ODEProblem(du_dx!, u_init, xspan)
+	sol = solve(prob, TRBDF2(), reltol=1e-8, abstol=1e-8)
+	# Plot
+	#plot(sol, xlabel="z", ylabel="u(z)", title="Velocity Profile")
+	#print(sol(500))
+	plot!(sol.t, [u1/el[1] for el in sol.u], xlabel="z", ylabel="u1/u(z)", label="dZ/dt="*string(Γ))
+	push!(solsIG,sol)
+
+	end
+	plot!()
+end
+
+# ╔═╡ 83f83c2d-79b1-4c12-92a8-8cc76c00260f
+begin
+plot()
+#u0uzSW = []
+#uzSW = []
+
+solsSW = []
+	
+for Γ in Γ0s
+ρ1 = ρ1SW
+u1 = u1SW
+			
+	function ∂p_∂ρ(T, ρ)
+		# specific gas constant for CO₂ [J/(kg·K)]
+		#return m.r * T
+	    return swdpdρ(ρ, T, 1)
+	end
+	function ∂p_∂T(T, ρ)
+		#return m.r * ρ
+	    return swdpdT(ρ, T, 1)
+	end
+	# Define the ODE system: du/dx = RHS
+	function du_dx!(du, u, p, x)
+		g=9.81
+	    ρ = ρ1 * u1 / u[1]
+	    T = T1 - Γ * x
+	    dpdrho = ∂p_∂ρ(T, ρ)
+	    dpdT = ∂p_∂T(T, ρ)
+	    factor = 1 - (dpdrho / u[1]^2)
+	    rhs = (-g / u[1]) +fric * u[1] - (1 / (ρ1 * u1)) * dpdT * (-Γ)
+	    du[1] = rhs / factor
+	end
+	# Initial conditions
+	#T₀ = 300.0              # Initial temperature [K]
+	xspan = (0.0, Z)     # Spatial domain
+	u_init = [u1]
+	
+	# Solve ODE
+	prob = ODEProblem(du_dx!, u_init, xspan)
+	sol = solve(prob, TRBDF2(), reltol=1e-8, abstol=1e-8)
+	# Plot
+	#plot(sol, xlabel="z", ylabel="u(z)", title="Velocity Profile")
+	#print(sol(500))
+	plot!(sol.t, [u1/el[1] for el in sol.u], xlabel="z", ylabel="u1/u(z)", label="dZ/dt="*string(Γ))
+	push!(solsSW,sol)
+
+	end
+	plot!()
+end
+
+# ╔═╡ a9b30254-2457-4b72-aeda-8eae37b73795
+ρsolsSW = [(solSW.t,  [ρ1SW .*  u1SW  ./ sol[1] for sol in solSW.u]) for solSW in solsSW]
+
+# ╔═╡ a2fd76f2-2ed7-4126-a7bc-52660101892a
+
+
+# ╔═╡ ee23f700-9071-4fab-875e-d5499f97c355
+ρsolsIG = [(solIG.t,  [ρ1IG .* u1IG ./ sol[1] for sol in solIG.u]) for solIG in solsIG]
+
+# ╔═╡ 14e28651-4456-4924-aba2-f557d96ea9c3
+begin
+	psolsSW = []
+	for i in 1:length(Γ0s)
+		ρsolSW = ρsolsSW[i]
+		zs = ρsolSW[1]
+		ps = [swpco2(ρsolSW[2][j] , T1 - Γ0s[i] * zs[j]) for j in 1:length(zs)]
+		push!(psolsSW,(zs,ps))
+	end
+end
+
+# ╔═╡ a33988c9-13d0-4b72-8442-80c3ce979ebf
+begin
+	psolsIG = []
+	for i in 1:length(Γ0s)
+		ρsolIG = ρsolsIG[i]
+		zs = ρsolIG[1]
+		ps = ρsolIG[2] .* m.r .* (T1 .-zs .* Γ0s[i])
+		push!(psolsIG,(zs,ps))
+	end
+end
+
+# ╔═╡ b2d42941-8297-4cc6-81eb-ce4c4b892145
+
+
+# ╔═╡ e5182725-1cf0-4e87-a0bf-726fc3a50eae
+linestyles = [:solid, :dashdotdot, :dash]
+
+# ╔═╡ 1cd28c40-b6bc-4891-adf4-934abf66ee6a
+ρ1SW
+
+# ╔═╡ b52f722d-e2da-454f-98eb-7439476a7e1d
+ρ1IG
+
+# ╔═╡ f6eabbcf-54f5-44c3-b8f0-4e6d59d34ca3
+begin
+	plot(title = "ρ(z) dependance on EOS and dT/dz")
+	for i in 1:length(Γ0s)
+		ρsolSW = ρsolsSW[i]
+		ρsolIG = ρsolsIG[i]
+		plot!(ρsolSW[2], Z .- ρsolSW[1], label="Span-Wagner EOS, dT/dz = "* string(round(Γ0s[i] * 1000, digits=1)) *" K/km", yflip=true, color="red", line = (2,linestyles[i]))
+		plot!(ρsolIG[2], Z .-ρsolIG[1], label= "Ideal Gas EOS, dT/dz = "* string(round(Γ0s[i] * 1000, digits=1)) *" K/km", color="blue", line = (2,linestyles[i]), legend=:topright)
+		ylabel!("z (m)")
+		xlabel!("ρ(z) (kg/m^3)")
+	end
+	plot!()
+end
+
+# ╔═╡ 2b29bfa2-9f55-4318-a81b-02416b79b392
+
+
+# ╔═╡ 1dc69284-06dc-4d66-aad5-efaeb86aaee3
+begin
+	plot(title = "p(z) dependance on EOS and dT/dz")
+	for i in 1:length(Γ0s)
+		psolSW = psolsSW[i]
+		psolIG = psolsIG[i]
+		plot!(psolSW[2] ./1e6, Z .- psolSW[1], label="Span-Wagner EOS, dT/dz = "* string(round(Γ0s[i] * 1000, digits=1)) *" K/km", color="red", yflip=true, line = (2,linestyles[i]))
+		plot!(psolIG[2] ./1e6,Z .- psolIG[1], label= "Ideal Gas EOS, dT/dz = "* string(round(Γ0s[i] * 1000, digits=1)) *" K/km", color="blue", line = (2,linestyles[i]), legend=:topright)
+		ylabel!("z (m)")
+		xlabel!("p(z) (MPa)", legend=:bottomleft)
+		
+	end
+	plot!()
+end
+
+# ╔═╡ 82671327-56d5-4743-8647-d22f1c4a6dfc
+let
+	plot()
+	pressures = 5.6e6:1e4:6.9e6
+	Temps = 293:2:313
+	for T in Temps
+		ρ = pressures./(T*m.r)
+		plot!(pressures ./1e6,ρ, label="$T  K", color = get(cgrad([:blue, :magenta, :red]),(T-293)/20))
+	end
+	plot!(xlabel = "p (MPa)", ylabel = "ρ (kg/m3)")
+
+	#=for i in 1:length(Γ0s)
+		scatter!(psolsSW[i][2] ./1e6,ρsolsSW[i][2], title="Pipe flows in p, ρ space", label = "SW, dTdz = " * string(Γ0s[i]))
+	end
+=#
+	for i in 1:length(Γ0s)
+		scatter!(psolsIG[i][2]./1e6,ρsolsIG[i][2], title="Ideal Gas EOS pipe flows in p, ρ space", label = "dT/dz = " * string(round(Γ0s[i] * 1000, digits=1)) *" K/km")
+	end
+	plot!(yrange = (100, 125), legend = :topleft)
+
+end
+
+# ╔═╡ bcdd540e-ab40-4b93-a74c-f068bc00c681
+301 - Z * .016
+
+# ╔═╡ 9cd11ed1-9e1b-4784-8349-97374df66608
+301 .+ Z .* Γ0s
+
+# ╔═╡ 5a536c2d-2c5b-46c0-aea4-a64054065d8e
+ρ1SW
+
+# ╔═╡ adb7de8e-fdae-4b19-bf78-1c495710e01c
+ρ1IG
+
+# ╔═╡ 3c4bcb55-1b32-4bee-8380-f2aa53fa32f3
+begin
+	
+	pipeA = (d/2)^2 * π
+	rockA = 2 *.1 * 11 * π
+
+	scatter([u1ρ1*pipeA], [p1], xlabel = "u1ρ1A (kg/s)", ylabel = "p1 (Pa)", title="p1,u1 diagram for pinf = 6.75e6 (Pa)", label = "pipe")
+
+	#=
+	rockinj = [.01,1,1.1470007375, 2.294001475,4.58800295]
+	rockp1s = [6.2162880623517e6,7.5173408004405e6]
+	#rockρ1s = rockp1s./(m.r * T1)
+	#rocku1s = rockinj ./ rockρ1s
+	rockuρA = rockinj .* rockA
+	scatter!(rockuρA,rockp1s, label = "rock")
+	=#
+end
+
+# ╔═╡ fbddcbb5-fb38-4b31-8cf2-feb4283d3fc9
+swdenco2(6.9221567538104e6, 301)
+
+# ╔═╡ 4359b909-6c05-4459-a16b-50a5ff45d076
+let
+	plot()
+	pressures = 6e6:1e4:7e6
+	Temps = 300:.1:302
+	for T in Temps
+		ρ = [maximum(swdenco2(p,T)) for p in pressures]
+		plot!(pressures ./1e6,ρ, label="$T  K", color = get(cgrad([:blue, :magenta, :red]),(T-300)/40))
+	end
+	scatter!([6.923], [669.07])
+end
+
+# ╔═╡ f7171ada-71ee-476c-b8f9-311daa7790fc
+let
+	plot()
+	ρs = 1:1200
+	Temps = 301:1:301
+	for T in Temps
+		p = [swpco2(ρ, T) for ρ in ρs]
+		plot!(p ./ 1e6,ρs, label="$T  K", color = get(cgrad([:blue, :magenta, :red]),(T-250)/70), linestyle=:dot)
+	end
+
+	
+	pressures = 6.7e6:1e4:6.95e6
+	for T in Temps
+		ρ = [maximum(swdenco2(p,T)) for p in pressures]
+		plot!(pressures./1e6,ρ, label="301 K, binodal", color = get(cgrad([:blue, :magenta, :red]),(T-250)/70), linestyle=:dash)
+
+	end
+	
+	plot!(xlabel = "p (MPa)", ylabel = "ρ (kg/m3)", xlims = (6, 8))
+	scatter!([6.867], [660.671], label = "Point encountered in MOOSE simulation", title = "MOOSE simulation phase change", legend=:bottomright)
+	#vline!([6.867], linestyle = :dash)
+
+	#scatter!(spinodalpressures[(abs.(spinodaldpdρ) .< 100)]./1e6, hcat(repeat([spinodalρs], length(spinodalTemps))...)[(abs.(spinodaldpdρ) .< 100)], label = "Spinodal Curve", xlims = (6.7,6.95))
+end
+
+# ╔═╡ 7457a0ad-b7df-4ed2-a747-d18dcd3b20e4
+let
+	plot()
+	ρs = 1:1300
+	Temps = 290:20:290
+	for T in Temps
+		p = [swpco2(ρ, T) for ρ in ρs]
+		plot!(p ./ 1e6,ρs, label="$T  K", color = get(cgrad([:blue, :magenta, :red]),(T-250)/70))
+	end
+
+	
+	pressures = 1e6:1e4:6.95e6
+	for T in Temps
+		ρ = [maximum(swdenco2(p,T)) for p in pressures]
+		plot!(pressures./1e6,ρ, label="$T  K, artifact", color = get(cgrad([:blue, :magenta, :red]),(T-250)/70), linestyle=:dash)
+
+	end
+
+	#hline!([626.9])
+	#hline!([154.5] , label = "Binodal curve lower ρ value")
+	#vline!([5.09])
+	plot!(xlabel = "p (MPa)", ylabel = "ρ (kg/m3)", xlims = (0, 10))
+	#scatter!([6.867], [660.671], label = "Point encountered in MOOSE simulation", title = "MOOSE simulation phase change", legend=:bottomright)
+	#vline!([6.867], linestyle = :dash)
+
+	#scatter!(spinodalpressures[(abs.(spinodaldpdρ) .< 100)]./1e6, hcat(repeat([spinodalρs], length(spinodalTemps))...)[(abs.(spinodaldpdρ) .< 100)], label = "Spinodal Curve", xlims = (6.7,6.95))
+end
+
+# ╔═╡ 6740e67f-e843-4b9b-9fcf-ca91d34c624f
+swdpdT(270,293)
+
+# ╔═╡ 432a9425-1a09-44fb-afdc-cfa73f1f5654
+swdenco2(6.865e6, 301)
+
+# ╔═╡ 9ab6e0f8-6a1e-45d4-9d42-f86cc4c94174
+
+
+# ╔═╡ 8143154e-01b0-4eb6-9315-2828d421ecc5
+swdpdT(293,270)
+
+# ╔═╡ 458a19b0-38a9-4207-ad7f-52e3b6478ca9
+swdpdρ(270,293)
+
+# ╔═╡ 74669e64-63ed-4fb9-8c4d-359fbc6530f7
+swdpdρ(293,270)
+
+# ╔═╡ b54f250f-2668-4108-87bf-41b185537db1
+m.rhoc
+
+# ╔═╡ 14c8d1ea-8a8c-4072-be1d-fff50ac68a5c
+m.tc - 273.15
+
+# ╔═╡ a1d83d35-18f2-45fb-b719-a1c70abbba25
+m.pc
+
+# ╔═╡ 7c172e6f-f138-45fb-90f5-8e5083591685
+pt, ρt, Tt = .518, 1178.5, 273.15-58.56
+
+# ╔═╡ 7f13ffa8-6e32-4957-9f83-0dcfe276a209
+let
+	plot()
+	ρs = 1:1300
+	Temps = 223.15:10:223.15
+	#=or T in Temps
+		p = [swpco2(ρ, T) for ρ in ρs]
+		plot!(p ./ 1e6,ρs, label="$T  K", color = get(cgrad([:blue, :magenta, :red]),(T-250)/70))
+	end=#
+	plot!(xlabel = "pressure in MPa", ylabel = "density in kg/m3", xlims = (0, 20))
+
+	
+	pressures = 1e4:1e4:10e6
+	for T in Temps
+		ρ = [maximum(swdenco2(p,T)) for p in pressures]
+		dρdp = [swdpdρ(ρ1, T) for ρ1 in ρ]
+		plot!(pressures./1e6,ρ, label=false, color = get(cgrad([:blue, :magenta, :red]),(T-250)/70), linestyle=:dot)
+
+		#plot!(pressures./1e6,dρdp, label=false, color = get(cgrad([:blue, :magenta, :red]),(T-250)/70), linestyle=:dot)
+
+	end
+	plot!(xlabel = "p (MPa)", ylabel = "ρ (kg/m3)", title="p(ρ,T) (solid) vs ρ(p,t) (dotted) comparison")
+
+	#scatter!(spinodalpressures[(abs.(spinodaldpdρ) .< 100)]./1e6, hcat(repeat([spinodalρs], length(spinodalTemps))...)[(abs.(spinodaldpdρ) .< 100)], label = "Spinodal Curve")
+
+	#scatter!([6.92], [668.948])
+
+	scatter!([m.pc],[m.rhoc], label = "Critical Point")
+	scatter!([pt],[ρt], label = "Triple Point")
+
+	#vline!([6.61])
+
+
+	
+			    
+end
+
+# ╔═╡ 79fe49ff-073b-4cde-a252-1be3af7a451e
+swdenco2(pt * 1e6 , Tt)
+
+# ╔═╡ 82c764d3-39c1-42f4-b9ac-cf7619c98fb7
+
+
+# ╔═╡ 086053d0-c9c9-43d6-b7ea-d25a0636e47f
+scatter(pressures[(abs.(dpdρ) .< 100)]./1e6, hcat(repeat([ρs], length(Temps))...)[(abs.(dpdρ) .< 100)], label = "Spinodal Curve")
+
+# ╔═╡ 4841c9e6-4807-45f2-a5bd-6ec58d4a723a
+
+
+# ╔═╡ c38cbd28-58d3-4d62-b4ba-3afef1ee15c7
+begin
+	plot()
+	spinodalρs = 1:1:1300
+	spinodalTemps = m.tc-50:2:m.tc
+	spinodalpressures = [[swpco2(ρ, T) for ρ in spinodalρs] for T in spinodalTemps]
+	spinodaldpdρ = [[swdpdρ(ρ, T) for ρ in spinodalρs] for T in spinodalTemps]
+	spinodaldpdv = [[-ρ^2 * swdpdρ(ρ, T) for ρ in spinodalρs] for T in spinodalTemps]
+	spinodalpressures = vcat(hcat(spinodalpressures...))
+	spinodaldpdρ = vcat(hcat(spinodaldpdρ...))
+	spinodaldpdv = vcat(hcat(spinodaldpdv...))
+
+	
+	#=scatter(pressures./1e6, ρs,
+    marker_z = dpdρ,
+    xlabel = "p (MPa)",
+    ylabel = "ρ (kg/m^3)",
+    title = "Heatmap of ∂p/∂ρ vs and p and ρ (varying T)",
+    colorbar_title = "∂p/∂ρ",
+    markersize = 4,
+    label = false,
+    c = cgrad([:blue, :black, :red]),
+	clim = (-100, 100))
+	plot!(xlims = (0,10))=#
+#=
+	for t in 1:length(spinodalTemps)
+		scatter!(spinodalpressures[:,t] ./1e6,spinodaldpdρ[:,t], label = string(spinodalTemps[t]) * "K", xlabel = "p (MPa)", ylabel ="dpdρ (m^3Pa/kg)", markersize=1)
+	end
+	plot!(xlims = (5,6), ylims = (-1e5, 1e5))
+	#vline!([6.61])=#
 	
 end
+
+# ╔═╡ a8c41e81-fae4-4c3c-a0e7-f32ec1ee6e8b
+let
+	plot()
+	pressures = 5.6e6:1e4:6.9e6
+	Temps = 293:2:313
+
+	ρs = 1:300
+	for T in Temps
+		p = [swpco2(ρ, T) for ρ in ρs]
+		plot!(p ./ 1e6,ρs, label="$T  K", color = get(cgrad([:blue, :magenta, :red]),(T-293)/20))
+	end
+	
+	for T in Temps
+		ρ = [maximum(swdenco2(p,T)) for p in pressures]
+		plot!(pressures ./1e6,ρ, label=false, color = get(cgrad([:blue, :magenta, :red]),(T-293)/20), linestyle=:dash)
+	end
+	plot!(xlabel = "p (MPa)", ylabel = "ρ (kg/m3)", xlims = (5.6, 6.9))
+
+
+	
+	for i in 1:length(Γ0s)
+		scatter!(psolsSW[i][2] ./1e6,ρsolsSW[i][2], title="Span-Wagner EOS pipe flows in p, ρ space", label = "dT/dz = " * string(round(Γ0s[i] * 1000, digits=1)) *" K/km")
+	end
+
+	scatter!(spinodalpressures[(abs.(spinodaldpdρ) .< 100)]./1e6, hcat(repeat([spinodalρs], length(spinodalTemps))...)[(abs.(spinodaldpdρ) .< 100)], label = "Spinodal Curve")
+	
+	#=for i in 1:length(Γ0s)
+		scatter!(psolsIG[i][2],ρsolsIG[i][2], label = "IG, dTdz = " * string(Γ0s[i]))
+	end=#
+	plot!(yrange = (90, 300), legend = :bottomright)
+end
+
+# ╔═╡ d63fa9d1-07f4-4368-951e-45d7df78156e
+let
+	plot()
+	pressures = 1e6:1e5:10e6
+	Temps = 263:10:313
+
+	ρs = 1:1300
+	for T in Temps
+		p = [swpco2(ρ, T) for ρ in ρs]
+		plot!(1 ./ρs, p ./ 1e6, label="$T  K", color = get(cgrad([:blue, :magenta, :red]),(T-263)/50), xscale = :log10, ylim = (-5, 10), xlim = (.0009, .1))
+	end
+
+	for T in Temps
+		ρ = [maximum(swdenco2(p,T)) for p in pressures]
+		plot!(1 ./ ρ, pressures ./1e6, label=false, color = get(cgrad([:blue, :magenta, :red]),(T-263)/50), linestyle=:dash)
+	end
+
+	scatter!(1 ./ (hcat(repeat([spinodalρs], length(spinodalTemps))...)[(abs.(spinodaldpdρ) .< 100)]), spinodalpressures[(abs.(spinodaldpdρ) .< 100)]./1e6, label = "Spinodal Curve")
+	
+	
+	plot!(ylabel = "p (MPa)", xlabel = "1/ρ (m^3/kg)")
+end
+
+# ╔═╡ 4e142477-2b69-42ce-869b-793ed3b05608
+let 
+	ρs = 1:.1:1300
+	Temps = m.tc-25:5:m.tc
+	plot()
+
+	pressures=1e6:1e5:10e6
+
+	#=
+	for T in spinodalTemps
+		spinodaldpdv = [-ρ^2 * swdpdρ(ρ, T) for ρ in spinodalρs]
+		plot!(1 ./spinodalρs, spinodaldpdv / 1e9, label="$T  K, dpdv curve", color = get(cgrad([:blue, :magenta, :red]),(T-250)/40), linestyle = :dot)
+
+		#inf1 = argmax(spinodaldpdv ./ 1e9)
+		#inf2 = argmin(spinodaldpdv[1:inf1] ./ 1e9)
+		#hline!([(spinodaldpdv ./ 1e9)[inf1]], label = #string(round(swpco2(spinodalρs[inf1], T) /1e6, digits=1)) * "MPa")
+		#hline!([(spinodaldpdv ./ 1e9)[inf2]], label = #string(round(swpco2(spinodalρs[inf2], T)/1e6, digits=1)) * "MPa")
+
+		#vline!([(1 ./spinodalρs)[inf1]], label = string(spinodalρs[inf1]) * "kg/m^3")
+		#vline!([(1 ./spinodalρs)[inf2]], label = string(spinodalρs[inf2]) * "kg/m^3")
+	end
+    =#
+	for T in Temps
+		p = [swpco2(ρ, T) for ρ in spinodalρs]
+		plot!(1 ./ spinodalρs, p ./ 1e6, label="$T  K, pressure curve", color = get(cgrad([:blue, :magenta, :red]),(T+25-m.tc)/25))
+	end
+	
+	for T in Temps
+		ρ = [maximum(swdenco2(p,T)) for p in pressures]
+		plot!(1 ./ ρ, pressures ./1e6, label=false, color = get(cgrad([:blue, :magenta, :red]),(T+25-m.tc)/25), linestyle = :dash)
+	end
+	plot!(xlims = (.0008, .02), ylims = (-1, 10), ylabel = "p (MPa)", xlabel = "v (m^3 / kg)")
+
+	scatter!(1 ./ (hcat(repeat([spinodalρs], length(spinodalTemps))...)[(abs.(spinodaldpdρ) .< 100)]), spinodalpressures[(abs.(spinodaldpdρ) .< 100)]./1e6, label = "Spinodal Curve")
+	
+
+	scatter!([1/m.rhoc], [m.pc], label = "Critical Point")
+	scatter!([1/ρt], [pt], label = "Triple Point")
+end
+
+# ╔═╡ 6fe42fae-148c-4837-8590-32abe27e2bf5
+scatter(spinodalpressures./1e6, spinodaldpdv, xlims = (-20, 20), ylims = (-5e11, 1e11))
+
+# ╔═╡ 7f6b25a4-508d-4f2c-9b1c-b75f6ea063f1
+let 
+	spinodalρs = 1:1:1300
+	spinodalTemps = 280:20:280
+	plot()
+
+	pressures=1e6:1e6:10e6
+	
+	for T in spinodalTemps
+		spinodaldpdv = [-ρ^2 * swdpdρ(ρ, T) for ρ in spinodalρs]
+		plot!(1 ./spinodalρs, spinodaldpdv / 1e9, label="$T  K", color = get(cgrad([:blue, :magenta, :red]),(T-250)/40), linestyle = :dot)
+	end
+
+	for T in spinodalTemps
+		p = [swpco2(ρ, T) for ρ in spinodalρs]
+		plot!(1 ./ spinodalρs, p ./ 1e6, label="$T  K", color = get(cgrad([:blue, :magenta, :red]),(T-250)/40))
+	end
+	
+	for T in spinodalTemps
+		ρ = [maximum(swdenco2(p,T)) for p in pressures]
+		plot!(1 ./ ρ, pressures ./1e6, label=false, color = get(cgrad([:blue, :magenta, :red]),(T-250)/40), linestyle = :dash)
+	end
+	plot!(ylims = (-10, 10), xscale = :log10)
+end
+
+# ╔═╡ ffbe45e4-8ce9-4a92-a921-0a12833fe299
+[ρs ρs ρs ρs ρs ρs ρs ρs][(abs.(dpdρ) .< 100)]
+
+# ╔═╡ a8121299-7fec-4dbe-b8b7-7fc2965d57c1
+hcat(repeat([ρs], length(Temps))...)[(abs.(dpdρ) .< 100)]
+
+# ╔═╡ a549320b-e3ec-4c3d-8c05-3e0e11a1a539
+pressures[(abs.(dpdρ) .< 100)]
+
+# ╔═╡ 90e2256b-aef7-453b-be46-87fdd6b23f48
+begin
+	scatter(pressures[(abs.(dpdρ) .< 100)]./1e6, hcat(repeat([ρs], length(Temps))...)[(abs.(dpdρ) .< 100)], label = false)
+	plot!(xlims = (0,10), xlabel = "p (MPa)",
+    ylabel = "ρ (kg/m^3)", title="Spinodal curve")
+
+	
+			    
+end
+
+# ╔═╡ f3a9d25d-3041-4d85-af7d-260613338a2b
+length(1:2:100)
+
+# ╔═╡ 186a327f-e9dd-444b-80fc-de3dece4b27a
+heatmap([1,2],[1,2],[1 2
+	1 2])
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
-LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
 [compat]
 DifferentialEquations = "~7.15.0"
 Plots = "~1.40.9"
+PlutoUI = "~0.7.60"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -129,7 +884,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.3"
 manifest_format = "2.0"
-project_hash = "e2d245cd20d6cece54605fa2662907cfdd7e05c3"
+project_hash = "638ecc4944edd2b14d091d34d3457ca26e084bf4"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "72af59f5b8f09faee36b4ec48e014a79210f2f4f"
@@ -141,6 +896,12 @@ weakdeps = ["ChainRulesCore", "ConstructionBase", "EnzymeCore"]
     ADTypesChainRulesCoreExt = "ChainRulesCore"
     ADTypesConstructionBaseExt = "ConstructionBase"
     ADTypesEnzymeCoreExt = "EnzymeCore"
+
+[[deps.AbstractPlutoDingetjes]]
+deps = ["Pkg"]
+git-tree-sha1 = "6e1d2a35f2f90a4bc7c2ed98079b2ba09c35b83a"
+uuid = "6e696c72-6542-2067-7265-42206c756150"
+version = "1.3.2"
 
 [[deps.Accessors]]
 deps = ["CompositionsBase", "ConstructionBase", "InverseFunctions", "LinearAlgebra", "MacroTools", "Markdown"]
@@ -356,21 +1117,15 @@ version = "3.27.1"
 
 [[deps.ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
-git-tree-sha1 = "c7acce7a7e1078a20a285211dd73cd3941a871d6"
+git-tree-sha1 = "b10d0b65641d57b8b4d5e234446582de5047050d"
 uuid = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
-version = "0.12.0"
-
-    [deps.ColorTypes.extensions]
-    StyledStringsExt = "StyledStrings"
-
-    [deps.ColorTypes.weakdeps]
-    StyledStrings = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
+version = "0.11.5"
 
 [[deps.ColorVectorSpace]]
 deps = ["ColorTypes", "FixedPointNumbers", "LinearAlgebra", "Requires", "Statistics", "TensorCore"]
-git-tree-sha1 = "8b3b6f87ce8f65a2b4f857528fd8d70086cd72b1"
+git-tree-sha1 = "a1f44953f2382ebb937d60dafbe2deea4bd23249"
 uuid = "c3611d14-8923-5661-9e6a-0046d554d3a4"
-version = "0.11.0"
+version = "0.10.0"
 weakdeps = ["SpecialFunctions"]
 
     [deps.ColorVectorSpace.extensions]
@@ -942,6 +1697,24 @@ git-tree-sha1 = "b1c2585431c382e3fe5805874bda6aea90a95de9"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 version = "0.3.25"
 
+[[deps.Hyperscript]]
+deps = ["Test"]
+git-tree-sha1 = "179267cfa5e712760cd43dcae385d7ea90cc25a4"
+uuid = "47d2ed2b-36de-50cf-bf87-49c2cf4b8b91"
+version = "0.0.5"
+
+[[deps.HypertextLiteral]]
+deps = ["Tricks"]
+git-tree-sha1 = "7134810b1afce04bbc1045ca1985fbe81ce17653"
+uuid = "ac1192a8-f4b3-4bfe-ba22-af5b92cd3ab2"
+version = "0.9.5"
+
+[[deps.IOCapture]]
+deps = ["Logging", "Random"]
+git-tree-sha1 = "b6d6bfdd7ce25b0f9b2f6b3dd56b2673a66c8770"
+uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
+version = "0.2.5"
+
 [[deps.IfElse]]
 git-tree-sha1 = "debdd00ffef04665ccbb3e150747a77560e8fad1"
 uuid = "615f187c-cbe4-4ef1-ba3b-2fcf58d6d173"
@@ -1270,6 +2043,11 @@ weakdeps = ["ChainRulesCore", "ForwardDiff", "SpecialFunctions"]
     [deps.LoopVectorization.extensions]
     ForwardDiffExt = ["ChainRulesCore", "ForwardDiff"]
     SpecialFunctionsExt = "SpecialFunctions"
+
+[[deps.MIMEs]]
+git-tree-sha1 = "65f28ad4b594aebe22157d6fac869786a255b7eb"
+uuid = "6c6e2e6c-3030-632d-7369-2d6c69616d65"
+version = "0.1.4"
 
 [[deps.MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "oneTBB_jll"]
@@ -1761,6 +2539,12 @@ version = "1.40.9"
     IJulia = "7073ff75-c697-5162-941a-fcdaad2a7d2a"
     ImageInTerminal = "d8c32880-2388-543b-8c61-d9f865259254"
     Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
+
+[[deps.PlutoUI]]
+deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
+git-tree-sha1 = "eba4810d5e6a01f612b948c9fa94f905b49087b0"
+uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+version = "0.7.60"
 
 [[deps.PoissonRandom]]
 deps = ["Random"]
@@ -2331,6 +3115,11 @@ git-tree-sha1 = "be986ad9dac14888ba338c2554dcfec6939e1393"
 uuid = "d5829a12-d9aa-46ab-831f-fb7c9ab06edf"
 version = "0.2.1"
 
+[[deps.Tricks]]
+git-tree-sha1 = "7822b97e99a1672bfb1b49b668a6d46d58d8cbcb"
+uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
+version = "0.1.9"
+
 [[deps.TruncatedStacktraces]]
 deps = ["InteractiveUtils", "MacroTools", "Preferences"]
 git-tree-sha1 = "ea3e54c2bdde39062abf5a9758a23735558705e1"
@@ -2698,8 +3487,64 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╠═a1facde9-530e-4520-b115-81489125b6dd
-# ╠═b32f9216-a1eb-11ef-2859-cd7714c5243f
-# ╠═4488046e-c212-4845-8e56-6d706cb96889
+# ╠═e5ac7e84-23cd-11f0-34db-cff1405469fc
+# ╠═caebae43-84d6-42e6-9f9b-bbc333f51bc9
+# ╠═a2feddd2-5abe-4504-b188-3ccb45539c3a
+# ╠═c6b76375-516f-4f8c-86d2-38f145a854ad
+# ╠═4af8f8d5-9ce7-40d9-9cdd-8fc01810667e
+# ╠═1bcd162b-0b4f-45f5-924a-04e88b3e7226
+# ╠═eff8c145-3001-4d90-a5f9-d27c02bfc454
+# ╠═64c679d7-0bdb-4595-af9a-5991bad55a0c
+# ╠═93a9dc7d-56ea-4327-829c-7678456c22da
+# ╠═83f83c2d-79b1-4c12-92a8-8cc76c00260f
+# ╠═a9b30254-2457-4b72-aeda-8eae37b73795
+# ╠═a2fd76f2-2ed7-4126-a7bc-52660101892a
+# ╠═ee23f700-9071-4fab-875e-d5499f97c355
+# ╠═14e28651-4456-4924-aba2-f557d96ea9c3
+# ╠═a33988c9-13d0-4b72-8442-80c3ce979ebf
+# ╠═b2d42941-8297-4cc6-81eb-ce4c4b892145
+# ╠═e5182725-1cf0-4e87-a0bf-726fc3a50eae
+# ╠═1cd28c40-b6bc-4891-adf4-934abf66ee6a
+# ╠═b52f722d-e2da-454f-98eb-7439476a7e1d
+# ╠═f6eabbcf-54f5-44c3-b8f0-4e6d59d34ca3
+# ╠═2b29bfa2-9f55-4318-a81b-02416b79b392
+# ╠═1dc69284-06dc-4d66-aad5-efaeb86aaee3
+# ╠═a8c41e81-fae4-4c3c-a0e7-f32ec1ee6e8b
+# ╠═82671327-56d5-4743-8647-d22f1c4a6dfc
+# ╠═d63fa9d1-07f4-4368-951e-45d7df78156e
+# ╠═bcdd540e-ab40-4b93-a74c-f068bc00c681
+# ╠═9cd11ed1-9e1b-4784-8349-97374df66608
+# ╠═5a536c2d-2c5b-46c0-aea4-a64054065d8e
+# ╠═adb7de8e-fdae-4b19-bf78-1c495710e01c
+# ╠═3c4bcb55-1b32-4bee-8380-f2aa53fa32f3
+# ╠═fbddcbb5-fb38-4b31-8cf2-feb4283d3fc9
+# ╠═4359b909-6c05-4459-a16b-50a5ff45d076
+# ╠═f7171ada-71ee-476c-b8f9-311daa7790fc
+# ╠═4e142477-2b69-42ce-869b-793ed3b05608
+# ╠═7457a0ad-b7df-4ed2-a747-d18dcd3b20e4
+# ╠═6740e67f-e843-4b9b-9fcf-ca91d34c624f
+# ╠═432a9425-1a09-44fb-afdc-cfa73f1f5654
+# ╠═9ab6e0f8-6a1e-45d4-9d42-f86cc4c94174
+# ╠═8143154e-01b0-4eb6-9315-2828d421ecc5
+# ╠═458a19b0-38a9-4207-ad7f-52e3b6478ca9
+# ╠═74669e64-63ed-4fb9-8c4d-359fbc6530f7
+# ╠═7f13ffa8-6e32-4957-9f83-0dcfe276a209
+# ╠═79fe49ff-073b-4cde-a252-1be3af7a451e
+# ╠═b54f250f-2668-4108-87bf-41b185537db1
+# ╠═14c8d1ea-8a8c-4072-be1d-fff50ac68a5c
+# ╠═a1d83d35-18f2-45fb-b719-a1c70abbba25
+# ╠═7c172e6f-f138-45fb-90f5-8e5083591685
+# ╠═82c764d3-39c1-42f4-b9ac-cf7619c98fb7
+# ╠═086053d0-c9c9-43d6-b7ea-d25a0636e47f
+# ╠═4841c9e6-4807-45f2-a5bd-6ec58d4a723a
+# ╠═c38cbd28-58d3-4d62-b4ba-3afef1ee15c7
+# ╠═6fe42fae-148c-4837-8590-32abe27e2bf5
+# ╠═7f6b25a4-508d-4f2c-9b1c-b75f6ea063f1
+# ╠═ffbe45e4-8ce9-4a92-a921-0a12833fe299
+# ╠═a8121299-7fec-4dbe-b8b7-7fc2965d57c1
+# ╠═a549320b-e3ec-4c3d-8c05-3e0e11a1a539
+# ╠═90e2256b-aef7-453b-be46-87fdd6b23f48
+# ╠═f3a9d25d-3041-4d85-af7d-260613338a2b
+# ╠═186a327f-e9dd-444b-80fc-de3dece4b27a
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
