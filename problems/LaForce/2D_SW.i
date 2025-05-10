@@ -340,7 +340,7 @@
     use_mobility = false
     use_relperm = false
     fluid_phase = 1
-    flux_function = 'min(t/100.0,1)*(-2.294001475)' # 5.0E5 T/year = 15.855 kg/s, over area of 2Pi*0.1*11
+    flux_function = 'min(1,1)*(-2.294001475)' # 5.0E5 T/year = 15.855 kg/s, over area of 2Pi*0.1*11
   []
   [cold_co2]
     type = DirichletBC

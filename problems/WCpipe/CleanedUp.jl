@@ -14,491 +14,124 @@ macro bind(def, element)
     end
 end
 
-# ╔═╡ 0d190c12-c3a7-11ef-3a9d-21ccc3539bf6
-using Exodus, PlutoUI, Plots
-
-# ╔═╡ a63cb150-698e-4860-8608-e0cd233aa557
-pwd()
-
-# ╔═╡ 113e2991-8821-471d-beac-57ae2936e68a
-file="heatedpipepressuregravityverticalneumann_out.e"
-
-# ╔═╡ c50de9a5-fc48-485f-add9-92a4161c9293
-
-
-# ╔═╡ 28e000a7-7ec1-45bb-8680-538c95f4e561
-exo = ExodusDatabase(file, "r")
-
-# ╔═╡ a3ce26da-a647-4216-a1e6-48468e36347e
-coords          = read_coordinates(exo)
-
-# ╔═╡ 21fc60c0-9ade-424b-94eb-06227e2a50c5
-	blocks          = read_sets(exo, Block) # contains connectivity information
-
-
-# ╔═╡ eb81ba82-01bd-4804-a661-073ec4f1deb7
-	nsets           = read_sets(exo, NodeSet) # contains nodes on boundaries
-
-
-# ╔═╡ 81be84d8-a533-4117-9d88-99e83cb66b10
-
-
-# ╔═╡ 53e1b0c2-089b-4e25-abec-488ee4b33382
-x = length(nsets[1].nodes)
-
-# ╔═╡ 60be7b93-5e61-4345-a105-97e3c5736fa4
-y = length(nsets[2].nodes)
-
-# ╔═╡ 7de077c5-85ab-47f8-920f-6adb6b864c33
-begin
-	coordsconv = zeros(2,x*y) 
-	coordsconv[1,:] = coords[1,:]* (x-1) / coords[1, end]
-	coordsconv[2,:] = coords[2,:]* (y-1) / coords[2, end]
-	coordsconv=1 .+ Int64.(coordsconv)
+# ╔═╡ ef4dda92-fb8b-11ef-0aea-cd1ba25ce61a
+begin	
+	using Markdown
+	using InteractiveUtils
+	using Exodus, PlutoUI, Plots
 end
 
-# ╔═╡ 54dc0bf7-5ad9-4198-9347-35816d6acbd6
-#read_values(exo, Exodus.ElementVariable, t, 0, "U")
-
-# ╔═╡ a2e87440-28ac-4590-9f53-14305d70a582
-UoverTimes[2][:,5]
-
-# ╔═╡ dcee54a9-5f24-433f-a1d8-f59d5c43ab1c
-blocks[1].conn#[1,:]
-
-# ╔═╡ e664cf1a-a088-4af7-9bb0-390e17e334d4
-y
-
-# ╔═╡ 1d969d72-0b00-4181-b7be-d252b1ffc8d8
-xaxis = (minimum(coords[1,:]) + maximum(coords[1,:])/(2*(x-1)) :maximum(coords[1,:])/(x-1): maximum(coords[1,:]) - maximum(coords[1,:])/(2*(x-1)))
-
-# ╔═╡ 2a6ffeca-d927-48ed-9aef-9979b119e1b5
-length(xaxis)
-
-# ╔═╡ d84ebed6-fdf4-455c-9f7a-dcc93f07825e
-xaxis
-
-# ╔═╡ 1b21b22f-3e07-4b76-be2d-3cc18c55f56c
-xaxis
-
-# ╔═╡ 099c8eae-17af-49fe-b5ff-6b0754c41423
-xaxisalter = (minimum(coords[1,:]) + maximum(coords[1,:])/(2*(x)) :maximum(coords[1,:])/(x): maximum(coords[1,:]) - maximum(coords[1,:])/(2*(x)))
-
-# ╔═╡ 8c4dbf95-8312-4de0-a645-9b1c438f1a02
-xaxisalter
-
-# ╔═╡ 46f59392-de76-4043-9980-a39284d8ef5d
-yaxisalter = (minimum(coords[2,:]) + maximum(coords[2,:])/(2*(y)) :maximum(coords[2,:])/(y): maximum(coords[2,:]) - maximum(coords[2,:])/(2*(y)))
-
-# ╔═╡ 6a2b9761-2536-4841-b142-ccdea842fb93
-yaxisalter
-
-# ╔═╡ 3646f2c9-81c3-4076-8242-9637242e3070
-length(xaxis)
-
-# ╔═╡ e2c8658d-95ac-48a4-9433-26b883099c6d
-yaxis = (minimum(coords[2,:]) + maximum(coords[2,:])/(2*(y-1)) :maximum(coords[2,:])/(y-1): maximum(coords[2,:]) - maximum(coords[2,:])/(2*(y-1)))
-
-# ╔═╡ 67b3ab0c-b07b-44ad-9928-88965c9e42fe
-yaxis
-
-# ╔═╡ f5f35188-fea5-445f-88ec-9720b0e6d865
-length(collect(yaxis))
-
-# ╔═╡ 09e850ff-f991-4f8a-bd1b-10ce6c1f3f61
-yaxisreversed = (maximum(coords[2,:]) - maximum(coords[2,:])/(2*(y-1))):-maximum(coords[2,:])/(y-1):(minimum(coords[2,:]) + maximum(coords[2,:])/(2*(y-1))) 
-
-# ╔═╡ 85049c8b-2242-442f-b379-0edbd959a370
-length(collect(yaxisreversed))
-
-# ╔═╡ 20efcd08-042b-4135-9aa5-7d4e59141bf7
-xaxis
-
-# ╔═╡ baa23e3a-c80e-475d-a328-348d824c991c
-.001*200
-
-# ╔═╡ b68e776e-987d-433f-b666-f8e5f46871bf
-
-
-# ╔═╡ a05e37fd-68a4-48bf-a426-16841dc9cc42
-0:10/y:10
-
-# ╔═╡ 95ce8aed-3a53-48e5-ac2b-aa6b9e363c4e
-@bind t Slider(1:30)
-
-# ╔═╡ 89e415ca-6681-42e2-8691-ce67124a48e2
-pressures = read_values(exo, Exodus.ElementVariable, t, 0, "pressure")
-
-# ╔═╡ a775f1e5-e960-40ab-a3b2-b9f75aff85c5
-time = read_time(exo, t)
-
-# ╔═╡ ccedfae3-a72e-4546-b366-9f98a7830c88
-read_values(exo, Exodus.ElementVariable, t, 0, "u")
-
-# ╔═╡ f3b04179-3c09-4753-aa47-8af973734af7
-Ts = read_values(exo, Exodus.ElementVariable, t, 0, "T_fluid")
-
-# ╔═╡ 0b11c3ab-0280-47c1-aaab-c30ffb2db1d4
-density = pressures./Ts
-
-# ╔═╡ f3275a81-622a-4be0-968f-9a93c2e27eb7
-velocities = read_values(exo, Exodus.ElementVariable, t, 0, "vel_y")
-
-# ╔═╡ 29a2c92e-76bf-4141-b720-cbcca9240c88
-uvel = read_values(exo, Exodus.ElementVariable, t, 0, "vel_x")
-
-# ╔═╡ ca49ceef-85ba-4077-84da-6892f91f1c41
+# ╔═╡ 2e9405ab-514c-4795-8f0b-25b8d1667ffe
 begin
-	btopleft = blocks[1].conn[1,:]
-	PressureM = zeros(x-1,y-1)
-	TempM = zeros(x-1,y-1)
-	#DensityM = zeros(x-1,y-1)
-	VelM = zeros(x-1,y-1)
-	VelUM = zeros(x-1,y-1)
-
-	#DensityTimesVelocity = zeros(x-1,y-1)
+	# Define the file to read data from
+	file = "heatedpipepressuregravityverticalneumann_out.e"
+	exo = ExodusDatabase(file, "r")
 	
-
-	for i in 1:((x-1)*(y-1))
-			k = btopleft[i]
-			x = coordsconv[1, k]
-			y = coordsconv[2, k]
-			PressureM[x,y] = pressures[i]
-			TempM[x,y] = Ts[i]
-			#DensityM[x,y] = density[i]
-			VelM[x,y] = velocities[i]
-			VelUM[x,y] = uvel[i]
-
-			#DensityTimesVelocity[x,y] = density[i] * velocities[i]
-		end
+	# Read coordinates and sets from the Exodus file
+	coords = read_coordinates(exo)
+	blocks = read_sets(exo, Block)  # Connectivity information
+	nsets = read_sets(exo, NodeSet) # Nodes on boundaries
 end
 
-# ╔═╡ aedb476f-c72e-496a-8d47-47d8a134ac6b
+# ╔═╡ d3222845-be2b-4164-a61f-6e7b05337921
 begin
-	VoverTimes=[]
-	PoverTimes = []
-	times = []
-	maxt=6
-	for t in 2:maxt
-		VelM = zeros(x-1,y-1)
-		PM = zeros(x-1,y-1)
-		
-		Vt = read_values(exo, Exodus.ElementVariable, t, 0, "vel_y")
-		Pt = read_values(exo, Exodus.ElementVariable, t, 0, "pressure")
-		for i in 1:((x-1)*(y-1))
-			k = btopleft[i]
-			xc = coordsconv[1, k]
-			yc = coordsconv[2, k]
-			VelM[xc,yc] = Vt[i]
-			
-			PM[xc,yc] = Pt[i]
-		end
-		push!(VoverTimes, VelM)
-		push!(PoverTimes, PM)
-		push!(times, read_time(exo, t))
-	end
-	MiddleRowOverTimes = zeros(maxt-1, 40)
-
-	CenterSlicePressure = zeros(maxt-1,40)
-	for t in 1:(maxt-1)
-		MiddleRowOverTimes[t,:] = VoverTimes[t][20,:]
-		CenterSlicePressure[t,:] = PoverTimes[t][20,:]
-	end
+	# Extract number of nodes in the first two node sets
+	x_nodes = length(nsets[1].nodes)
+	y_nodes = length(nsets[2].nodes)
+	
+	# Convert coordinates for easier indexing
+	coordsconv = zeros(2, x_nodes * y_nodes)
+	coordsconv[1, :] = coords[1, :] * (x_nodes - 1) / coords[1, end]
+	coordsconv[2, :] = coords[2, :] * (y_nodes - 1) / coords[2, end]
+	coordsconv = Int64.(1 .+ Int64.(coordsconv))
+	
+	# Define spatial axes
+	x_axis = range(minimum(coords[1, :]), stop=maximum(coords[1, :]), length=x_nodes)
+	y_axis = range(maximum(coords[2, :]), stop=minimum(coords[2, :]), length=y_nodes)
+	x_other = range(minimum(coords[1, :]), stop=maximum(coords[1, :]), length=x_nodes-1)
+	y_other = range(maximum(coords[2, :]), stop=minimum(coords[2, :]), length=y_nodes-1)
 end
 
-# ╔═╡ 1f2ec773-df28-4e5f-acec-af7b1accd88f
-begin
-	DensityoverTimes = []
-	for t in 2:maxt
-		DensityM = zeros(x-1,y-1)
-		densities = read_values(exo, Exodus.NodalVariable, t, "rho_val")
-		DensityM = zeros(x,y)
-		for i in 1:x*y
-			x = coordsconv[1, i]
-			y = coordsconv[2, i]
-			DensityM[x,y] = densities[i]
-		end
-		push!(DensityoverTimes, DensityM)
-	end
-	CenterDensity = zeros(maxt-1, 41)
-	for t in 1:(maxt-1)
-		CenterDensity[t,:] = DensityoverTimes[t][20,:]
-	end
-end
-
-# ╔═╡ 5ed459af-7e6a-459a-9318-e1343e6c58fb
-CenterDensity
-
-# ╔═╡ 80c904c1-a0bb-4dbf-8882-fa1bcf2d73ee
-CenterDensity
-
-# ╔═╡ e7e0ac5a-5459-4311-9a43-8f390cc06362
-MiddleRowOverTimes
-
-# ╔═╡ 5ed3ea68-af6f-45b5-9407-753235bf91ac
-heatmap(times, yaxis, (MiddleRowOverTimes)', xscale=:log10, ylabel = "Distance in pipe", xlabel = "Time", title = "Flow Rate in center of pipe" )
-
-# ╔═╡ e23b36a9-f138-472c-9bc6-e8602d310210
-heatmap(times, yaxisalter, (CenterDensity)', xlabel = "Time", ylabel = "Density", title = "Density at x = .5"  )
-
-# ╔═╡ 9da62015-e82c-410f-885b-485e697d359f
-times
-
-# ╔═╡ 51ceaaa1-e371-40ee-9f87-e453f94eec46
-plot(times,CenterDensity'[20,:], xlabel= "time", ylabel = "Density")
-
-# ╔═╡ 3c6e96e4-f337-4b43-beb3-6eea9f2e3ffd
-heatmap(CenterSlicePressure./CenterDensity[:,1:40])
-
-# ╔═╡ 393a7f3a-ae55-4072-83f0-34b150c09eb8
-CenterSlicePressure
-
-# ╔═╡ 9a456653-bead-4b14-a70b-ff5b32ef1d44
-heatmap(times, yaxis, CenterSlicePressure')
-
-# ╔═╡ 57cffd1b-8c6d-405c-b984-2fc2b5c3f34a
-MiddleRowOverTimes
-
-# ╔═╡ 44e8f8ab-e755-4924-918e-c4f84534186f
-heatmap(times, yaxis, (CenterDensity[:,1:40].*MiddleRowOverTimes)')
-
-# ╔═╡ 7a134def-1f27-4bde-aa13-53ea9ff99607
-heatmap(times, yaxis, (CenterSlicePressure ./300 .*MiddleRowOverTimes)')
-
-# ╔═╡ 5c1bc662-1ce3-47a3-8d1f-babce506147a
-times
-
-# ╔═╡ 3b7c0068-9520-4180-abbf-feb2d7df834a
-heatmap(MiddleRowOverTimes)
-
-# ╔═╡ 438c6d5b-ec48-4161-9320-598b4474ee8e
-times
-
-# ╔═╡ 0c6c5931-4d0e-424a-bfa3-e34416b461c2
-times
-
-# ╔═╡ 4f90afee-5006-4e0f-b7d4-fe41844094bb
-sum(VelM[:,20])
-
-# ╔═╡ ced5ab40-825c-478f-9d42-712a7c4968f4
-sum(VelM[:,1])
-
-# ╔═╡ 8fed272e-57c3-4c44-a03b-b0f8f11f384f
-sum(VelUM)
-
-# ╔═╡ 0de52be9-2050-42b5-be1c-80eb21d6b7e1
-sum(VelUM'[:,1])
-
-# ╔═╡ a61bbb4c-f0b8-4899-a5e5-73f378663d1f
-VelUM'[:,1]
-
-# ╔═╡ 27877fef-9ff2-4215-8e03-85cb583c5eee
-sum(VelM'[:,1])
-
-# ╔═╡ f43f530e-51e7-4896-bd3a-123528b1c0f2
-VelUM'
-
-# ╔═╡ 7beeceec-3919-4d10-b8ca-0a4079ad14bf
-sum(VelUM)
-
-# ╔═╡ 38e4dca3-73b0-43e1-b7e8-97d47c9deb0a
-heatmap(xaxis, yaxis, VelM')
-
-# ╔═╡ 46a9f3e2-8530-435a-b229-ba0929e43f6d
-plot((sum(VelM, dims = 1))[:])
-
-# ╔═╡ d39ce575-c05d-42fc-b861-92ad5516b297
-sum(VelM[:,5])
-
-# ╔═╡ aa877d80-1234-4e54-9521-9b8fdc920ad2
-plot(VelM'[:,20], yaxis, title= "vertical velocity at x = .5", xlabel = "vertical velocity", ylabel = "depth")
-
-# ╔═╡ adb12737-2e72-41a9-9c8f-30e84a56c546
-plot(PressureM'[:,10], yaxis, title= "pressure at x = .5", xlabel = "p", ylabel = "depth")
-
-# ╔═╡ cdca0b6c-ede7-44b6-9e14-c78450de47cd
-plot(TempM'[:,10], yaxis, title= "Temperature at x = .5", xlabel = "T", ylabel = "depth")
-
-# ╔═╡ 6163b361-4267-4ff4-9ba9-4dd994b6755f
-plot(VelM'[10,:], title="v at depth=5")
-
-# ╔═╡ 0caf1eef-6dd5-4231-8970-5bbe9d705583
-plot(10:-10/39:0, PressureM'[:,10], title="Pressure at x=.5")
-
-# ╔═╡ e597c128-eef6-45d8-98fe-fd9e65a9f784
-(PressureM'[end,end]-PressureM'[1,1])/10/10
-
-# ╔═╡ 0f3591b2-0c62-4b1a-b6aa-da9dbf8c547c
-VelM'
-
-# ╔═╡ 47d65b02-de9e-4f8d-9cb4-ee745c4dc0fd
-VelUM'
-
-# ╔═╡ f9f0223a-2235-451b-8dcb-7cd9ec95dcd1
-VelM'
-
-# ╔═╡ 4709c72f-49d1-42c6-b843-64b759c5d52b
-VelM'
-
-# ╔═╡ a7b8f87c-9e0f-4b0a-b74f-593fbda9523a
-density
-
-# ╔═╡ 7073d627-3c2f-4fe6-a770-b4a4458df6b6
-begin
-	velx = read_values(exo, Exodus.NodalVariable, t, "u")
-	vely = read_values(exo, Exodus.NodalVariable, t, "v")
-	densities = read_values(exo, Exodus.NodalVariable, t, "rho_val")
-end
-
-# ╔═╡ 62ffe3fb-edf2-4223-9c4a-a5ef35cb9def
-#velx = VelUM
-
-# ╔═╡ 11e1d512-abe0-4b1f-85ec-c18e7e14af33
-#vely = VelM
-
-# ╔═╡ 7a3ee800-3b19-4d24-930f-18949417fb16
-length(velx)
-
-# ╔═╡ e49776d5-31a3-4099-ba72-538d7dacb161
-time
-
-# ╔═╡ ce892866-4d06-4fd3-8982-e6fd0905bd7a
-begin
-	sub = 16
-	scale = 1
-	quiverplot = Plots.quiver(coords[1,:][1:sub:end], coords[2,:][1:sub:end], quiver= scale .*(velx[1:sub:end],vely[1:sub:end]), arrow=true, title = "Velocity", xlabel = "x", ylabel = "y", rightmargin=5Plots.mm)
-end
-
-# ╔═╡ c47fd423-40a9-474d-8194-5a60621fa044
-vely
-
-# ╔═╡ 88d55cd5-e16b-4d76-8b8e-3958f1a2df07
-
-
-# ╔═╡ ac20a8c2-ad4c-4097-9a1b-4ee548a8bdbd
-heatmap(sqrt.((VelM').^2 + (VelUM').^2))
-
-# ╔═╡ 01f58896-83f1-4a68-badc-6c1862764dca
-
-
-# ╔═╡ b117c505-881e-4425-8ba2-b00f5dd37823
-
-
-# ╔═╡ 441766a5-fd7b-4cdf-9e37-5cc78b3b8185
+# ╔═╡ 17a07378-f4d8-4795-9d59-9a506a7c8885
 coordsconv
 
-# ╔═╡ 45f75ae0-8565-4e59-a012-61c941d92891
-coords
+# ╔═╡ 093e59f6-e4c8-49b9-b60c-73892d721dfb
+	@bind t Slider(1:20)
 
-# ╔═╡ f72876d6-eee4-4978-b05f-ce7f95b28767
-let
-	sub = 1
-	Plots.quiver(coords[1,:][1:sub:end], coords[2,:][1:sub:end], quiver=(velx[1:sub:end],vely[1:sub:end]))
-end
 
-# ╔═╡ 882d038a-ce53-4a12-8775-447668c89bd0
-length(vely)
+# ╔═╡ 60a5fd96-7db2-46a5-ae3c-1de17dbc60d7
 
-# ╔═╡ 11c72c31-9cb0-41c0-ad5d-74035b7d572f
-begin
-	VelyM = zeros(x,y)
-	for i in 1:x*y
-		x = coordsconv[1, i]
-		y = coordsconv[2, i]
-		VelyM[x,y] = vely[i]
+	# Read simulation data at a given time step
+begin	
+	pressures = read_values(exo, Exodus.ElementVariable, t, 0, "pressure")
+	Ts = read_values(exo, Exodus.ElementVariable, t, 0, "T_fluid")
+	ρ = 
+	vel_y = read_values(exo, Exodus.ElementVariable, t, 0, "vel_y")
+	vel_x = read_values(exo, Exodus.ElementVariable, t, 0, "vel_x")
+	
+	# Initialize matrices for storing simulation data
+	pressure_matrix = zeros(x_nodes - 1, y_nodes - 1)
+	temp_matrix = zeros(x_nodes - 1, y_nodes - 1)
+	velocity_matrix = zeros(x_nodes - 1, y_nodes - 1)
+	u_velocity_matrix = zeros(x_nodes - 1, y_nodes - 1)
+	
+	# Map values to corresponding positions
+	for i in 1:((x_nodes - 1) * (y_nodes - 1))
+	    k = blocks[1].conn[1, i]
+	    x_idx = coordsconv[1, k]
+	    y_idx = coordsconv[2, k]
+	    pressure_matrix[x_idx, y_idx] = pressures[i]
+	    temp_matrix[x_idx, y_idx] = Ts[i]
+	    velocity_matrix[x_idx, y_idx] = vel_y[i]
+	    u_velocity_matrix[x_idx, y_idx] = vel_x[i]
 	end
 end
 
-# ╔═╡ 8c759a98-9482-43f1-87f6-5c329ab41945
+# ╔═╡ 74eff70c-e897-4cad-8127-42c95d93c9f8
 begin
-	VelxM = zeros(x,y)
-	for i in 1:x*y
-		x = coordsconv[1, i]
-		y = coordsconv[2, i]
-		VelxM[x,y] = velx[i]
+	heatmap(x_axis, y_axis, velocity_matrix', title="Velocity Field", xlabel="x", ylabel="depth", yflip = true)
+	
+	# Plot pressure distribution
+	#plot(pressure_matrix'[:, 10], y_axis, title="Pressure at x = 0.5", xlabel="Pressure", ylabel="Depth")
+	
+	# Density times velocity visualization
+	#density_velocity = density .* vel_y
+	#heatmap(x_axis, y_axis, density_velocity', title="Density x Velocity", xlabel="x", ylabel="y")
+end
+
+# ╔═╡ 4c93a9c7-982b-4d88-bcee-97b5a99c4533
+plot(y_other, pressure_matrix'[:, Int64((x_nodes-1)/2)], title="Pressure at x = 0.5", ylabel="Pressure", xlabel="Depth", xflip = true)
+
+# ╔═╡ a8954306-63b4-490f-abba-b28932b572b1
+pressure_matrix
+
+# ╔═╡ 0b9580a8-0341-4792-b4ba-f78a96e26cb6
+begin
+	# Read nodal values for velocity and density
+	nodal_vel_x = read_values(exo, Exodus.NodalVariable, t, "u")
+	nodal_vel_y = read_values(exo, Exodus.NodalVariable, t, "v")
+	nodal_density = read_values(exo, Exodus.NodalVariable, t, "rho_val")
+
+	density_matrix = zeros(x_nodes, y_nodes)
+	vel_x_matrix = zeros(x_nodes, y_nodes)
+	vel_y_matrix = zeros(x_nodes, y_nodes)
+	# Map nodal density values
+	for i in 1:(x_nodes * y_nodes)
+	    x_idx = coordsconv[1, i]
+	    y_idx = coordsconv[2, i]
+	    density_matrix[x_idx, y_idx] = nodal_density[i]
+		vel_x_matrix[x_idx, y_idx] = nodal_vel_x[i]
+		vel_y_matrix[x_idx, y_idx] = nodal_vel_y[i]
 	end
+	vel_matrix = sqrt.(vel_x_matrix.^2 .+ vel_y_matrix.^2)
 end
-
-# ╔═╡ d3e4c7e4-7ae0-4e33-b62f-80d5f69d61f2
-begin
-	DensityM = zeros(x,y)
-	for i in 1:x*y
-		x = coordsconv[1, i]
-		y = coordsconv[2, i]
-		DensityM[x,y] = densities[i]
-	end
-end
-
-# ╔═╡ 251929fd-5180-447d-8dac-01f329cef703
-plot(DensityM'[:,20], yaxisalter, title= "density at x = .5", xlabel = "ρ", ylabel = "depth")
-
-# ╔═╡ d25e6f06-fb32-4cac-89f9-3574168dd9c9
-DensityM
-
-# ╔═╡ 7b6f1731-0179-4b67-8036-2b69b8251683
-DensityTimesVelocity = DensityM.*VelyM
-
-# ╔═╡ 09b23ce3-6f14-48c5-85b6-074a52c6db21
-begin
-	pplot=Plots.heatmap(xaxis, yaxis, PressureM', rightmargin=5Plots.mm, title = "Pressure")#, clim=(1e5, 1.025e5))
-	tplot= Plots.heatmap(xaxis, yaxis, TempM', rightmargin=5Plots.mm, title = "Temperature")#, clim=(1e5, 1.025e5))
-	ρplot= Plots.heatmap(xaxisalter, yaxisalter, DensityM', rightmargin=5Plots.mm,  title = "Density")#, clim=(-.015, .015))
-	duplot =  Plots.heatmap(xaxisalter, yaxisalter, DensityTimesVelocity', rightmargin=5Plots.mm,  title = "Density Times Velocity")
-	vplot = Plots.heatmap(xaxis, yaxis, VelM', rightmargin=20Plots.mm, clim=(-.015, .015))
-	uplot =  Plots.heatmap(xaxis, yaxis, VelUM', rightmargin=20Plots.mm)#, clim=(-.015, .015))
-end
-
-# ╔═╡ 9e7c6ff5-c049-4c23-a21a-54f7020df88a
-vplot
-
-# ╔═╡ 16169fd1-5a98-4d16-bb38-f969bc925f59
-vplot
-
-# ╔═╡ 48892256-546b-41c3-9ed7-a2185bf03216
-vplot
-
-# ╔═╡ a8e6092a-2906-433d-9d61-05e90ee6a106
-duplot
-
-# ╔═╡ c77aeff1-526c-4909-8027-63eb548b7328
-Plots.plot(pplot,tplot,ρplot, quiverplot, xlabel = "x", ylabel = "y", layout = (2,2)
-,  suptitle="Default Run, t=$time"
-)#, title = "Time $time")#, layout = (1, 2))
-
-# ╔═╡ 4b26a866-44f4-4d48-bb09-eb636ba38e98
-vplot
-
-# ╔═╡ cd5ccbd7-04d4-411f-a266-1099b3222668
-uplot
-
-# ╔═╡ e1c6024f-fd92-4d78-8763-8cfa806db9c7
-vplot
-
-# ╔═╡ ef05867d-e8f1-4511-817d-c00192fa02e2
-VelyM
-
-# ╔═╡ d2dfc0b9-ccc4-445c-a1df-ebca633424b9
-VelxM'
-
-# ╔═╡ 72aea5d4-3626-4a58-bf04-8c8fbc55363a
-Velyplot = heatmap(VelyM', rightmargin=20Plots.mm)
-
-# ╔═╡ cc6337de-3efb-4fa5-9962-ac8ca8c3bffd
-Velyplot
-
-# ╔═╡ fe72e078-6c06-497c-9db8-f10c7bb489e9
-VelyM
-
-# ╔═╡ ce62ceb3-8a79-491f-9c44-ac2f7ec9222e
-VelM
-
-# ╔═╡ 525e04fd-1394-4387-a1d9-ec11268b1b9f
-(-6.27018e-6 + -5.9849e-6)/2
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 Exodus = "f57ae99e-f805-4780-bdca-96e224be1e5a"
+InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
+Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
@@ -514,7 +147,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.3"
 manifest_format = "2.0"
-project_hash = "16a0fde2016237c46edb897a1b89af163801c480"
+project_hash = "6c7e59bbf08dcb7e176efcf11a88d9a2935d6422"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -1748,126 +1381,15 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╠═0d190c12-c3a7-11ef-3a9d-21ccc3539bf6
-# ╠═a63cb150-698e-4860-8608-e0cd233aa557
-# ╠═113e2991-8821-471d-beac-57ae2936e68a
-# ╠═c50de9a5-fc48-485f-add9-92a4161c9293
-# ╠═28e000a7-7ec1-45bb-8680-538c95f4e561
-# ╠═a3ce26da-a647-4216-a1e6-48468e36347e
-# ╠═21fc60c0-9ade-424b-94eb-06227e2a50c5
-# ╠═eb81ba82-01bd-4804-a661-073ec4f1deb7
-# ╠═81be84d8-a533-4117-9d88-99e83cb66b10
-# ╠═53e1b0c2-089b-4e25-abec-488ee4b33382
-# ╠═60be7b93-5e61-4345-a105-97e3c5736fa4
-# ╠═7de077c5-85ab-47f8-920f-6adb6b864c33
-# ╠═89e415ca-6681-42e2-8691-ce67124a48e2
-# ╠═a775f1e5-e960-40ab-a3b2-b9f75aff85c5
-# ╠═ccedfae3-a72e-4546-b366-9f98a7830c88
-# ╠═54dc0bf7-5ad9-4198-9347-35816d6acbd6
-# ╠═f3b04179-3c09-4753-aa47-8af973734af7
-# ╠═f3275a81-622a-4be0-968f-9a93c2e27eb7
-# ╠═29a2c92e-76bf-4141-b720-cbcca9240c88
-# ╠═0b11c3ab-0280-47c1-aaab-c30ffb2db1d4
-# ╠═aedb476f-c72e-496a-8d47-47d8a134ac6b
-# ╠═1f2ec773-df28-4e5f-acec-af7b1accd88f
-# ╠═5ed459af-7e6a-459a-9318-e1343e6c58fb
-# ╠═e7e0ac5a-5459-4311-9a43-8f390cc06362
-# ╠═2a6ffeca-d927-48ed-9aef-9979b119e1b5
-# ╠═d84ebed6-fdf4-455c-9f7a-dcc93f07825e
-# ╠═67b3ab0c-b07b-44ad-9928-88965c9e42fe
-# ╠═5ed3ea68-af6f-45b5-9407-753235bf91ac
-# ╠═e23b36a9-f138-472c-9bc6-e8602d310210
-# ╠═9da62015-e82c-410f-885b-485e697d359f
-# ╠═51ceaaa1-e371-40ee-9f87-e453f94eec46
-# ╠═3c6e96e4-f337-4b43-beb3-6eea9f2e3ffd
-# ╠═393a7f3a-ae55-4072-83f0-34b150c09eb8
-# ╠═f5f35188-fea5-445f-88ec-9720b0e6d865
-# ╠═85049c8b-2242-442f-b379-0edbd959a370
-# ╠═9a456653-bead-4b14-a70b-ff5b32ef1d44
-# ╠═80c904c1-a0bb-4dbf-8882-fa1bcf2d73ee
-# ╠═57cffd1b-8c6d-405c-b984-2fc2b5c3f34a
-# ╠═44e8f8ab-e755-4924-918e-c4f84534186f
-# ╠═7a134def-1f27-4bde-aa13-53ea9ff99607
-# ╠═5c1bc662-1ce3-47a3-8d1f-babce506147a
-# ╠═3b7c0068-9520-4180-abbf-feb2d7df834a
-# ╠═438c6d5b-ec48-4161-9320-598b4474ee8e
-# ╠═1b21b22f-3e07-4b76-be2d-3cc18c55f56c
-# ╠═0c6c5931-4d0e-424a-bfa3-e34416b461c2
-# ╠═a2e87440-28ac-4590-9f53-14305d70a582
-# ╠═dcee54a9-5f24-433f-a1d8-f59d5c43ab1c
-# ╠═ca49ceef-85ba-4077-84da-6892f91f1c41
-# ╠═4f90afee-5006-4e0f-b7d4-fe41844094bb
-# ╠═ced5ab40-825c-478f-9d42-712a7c4968f4
-# ╠═8fed272e-57c3-4c44-a03b-b0f8f11f384f
-# ╠═e664cf1a-a088-4af7-9bb0-390e17e334d4
-# ╠═1d969d72-0b00-4181-b7be-d252b1ffc8d8
-# ╠═8c4dbf95-8312-4de0-a645-9b1c438f1a02
-# ╠═099c8eae-17af-49fe-b5ff-6b0754c41423
-# ╠═46f59392-de76-4043-9980-a39284d8ef5d
-# ╠═6a2b9761-2536-4841-b142-ccdea842fb93
-# ╠═3646f2c9-81c3-4076-8242-9637242e3070
-# ╠═e2c8658d-95ac-48a4-9433-26b883099c6d
-# ╠═09e850ff-f991-4f8a-bd1b-10ce6c1f3f61
-# ╠═09b23ce3-6f14-48c5-85b6-074a52c6db21
-# ╠═20efcd08-042b-4135-9aa5-7d4e59141bf7
-# ╠═0de52be9-2050-42b5-be1c-80eb21d6b7e1
-# ╠═a61bbb4c-f0b8-4899-a5e5-73f378663d1f
-# ╠═27877fef-9ff2-4215-8e03-85cb583c5eee
-# ╠═f43f530e-51e7-4896-bd3a-123528b1c0f2
-# ╠═7beeceec-3919-4d10-b8ca-0a4079ad14bf
-# ╠═baa23e3a-c80e-475d-a328-348d824c991c
-# ╠═38e4dca3-73b0-43e1-b7e8-97d47c9deb0a
-# ╠═9e7c6ff5-c049-4c23-a21a-54f7020df88a
-# ╠═16169fd1-5a98-4d16-bb38-f969bc925f59
-# ╠═46a9f3e2-8530-435a-b229-ba0929e43f6d
-# ╠═d39ce575-c05d-42fc-b861-92ad5516b297
-# ╠═b68e776e-987d-433f-b666-f8e5f46871bf
-# ╠═aa877d80-1234-4e54-9521-9b8fdc920ad2
-# ╠═251929fd-5180-447d-8dac-01f329cef703
-# ╠═d25e6f06-fb32-4cac-89f9-3574168dd9c9
-# ╠═adb12737-2e72-41a9-9c8f-30e84a56c546
-# ╠═cdca0b6c-ede7-44b6-9e14-c78450de47cd
-# ╠═a05e37fd-68a4-48bf-a426-16841dc9cc42
-# ╠═6163b361-4267-4ff4-9ba9-4dd994b6755f
-# ╠═0caf1eef-6dd5-4231-8970-5bbe9d705583
-# ╠═e597c128-eef6-45d8-98fe-fd9e65a9f784
-# ╠═0f3591b2-0c62-4b1a-b6aa-da9dbf8c547c
-# ╠═47d65b02-de9e-4f8d-9cb4-ee745c4dc0fd
-# ╠═f9f0223a-2235-451b-8dcb-7cd9ec95dcd1
-# ╠═48892256-546b-41c3-9ed7-a2185bf03216
-# ╠═4709c72f-49d1-42c6-b843-64b759c5d52b
-# ╠═95ce8aed-3a53-48e5-ac2b-aa6b9e363c4e
-# ╠═a8e6092a-2906-433d-9d61-05e90ee6a106
-# ╠═c77aeff1-526c-4909-8027-63eb548b7328
-# ╠═a7b8f87c-9e0f-4b0a-b74f-593fbda9523a
-# ╠═4b26a866-44f4-4d48-bb09-eb636ba38e98
-# ╠═cd5ccbd7-04d4-411f-a266-1099b3222668
-# ╠═cc6337de-3efb-4fa5-9962-ac8ca8c3bffd
-# ╠═7073d627-3c2f-4fe6-a770-b4a4458df6b6
-# ╠═62ffe3fb-edf2-4223-9c4a-a5ef35cb9def
-# ╠═11e1d512-abe0-4b1f-85ec-c18e7e14af33
-# ╠═7a3ee800-3b19-4d24-930f-18949417fb16
-# ╠═e49776d5-31a3-4099-ba72-538d7dacb161
-# ╠═ce892866-4d06-4fd3-8982-e6fd0905bd7a
-# ╠═c47fd423-40a9-474d-8194-5a60621fa044
-# ╠═88d55cd5-e16b-4d76-8b8e-3958f1a2df07
-# ╠═ac20a8c2-ad4c-4097-9a1b-4ee548a8bdbd
-# ╠═01f58896-83f1-4a68-badc-6c1862764dca
-# ╠═b117c505-881e-4425-8ba2-b00f5dd37823
-# ╠═441766a5-fd7b-4cdf-9e37-5cc78b3b8185
-# ╠═45f75ae0-8565-4e59-a012-61c941d92891
-# ╠═f72876d6-eee4-4978-b05f-ce7f95b28767
-# ╠═e1c6024f-fd92-4d78-8763-8cfa806db9c7
-# ╠═882d038a-ce53-4a12-8775-447668c89bd0
-# ╠═11c72c31-9cb0-41c0-ad5d-74035b7d572f
-# ╠═8c759a98-9482-43f1-87f6-5c329ab41945
-# ╠═d3e4c7e4-7ae0-4e33-b62f-80d5f69d61f2
-# ╠═7b6f1731-0179-4b67-8036-2b69b8251683
-# ╠═ef05867d-e8f1-4511-817d-c00192fa02e2
-# ╠═d2dfc0b9-ccc4-445c-a1df-ebca633424b9
-# ╠═72aea5d4-3626-4a58-bf04-8c8fbc55363a
-# ╠═fe72e078-6c06-497c-9db8-f10c7bb489e9
-# ╠═ce62ceb3-8a79-491f-9c44-ac2f7ec9222e
-# ╠═525e04fd-1394-4387-a1d9-ec11268b1b9f
+# ╠═ef4dda92-fb8b-11ef-0aea-cd1ba25ce61a
+# ╠═2e9405ab-514c-4795-8f0b-25b8d1667ffe
+# ╠═d3222845-be2b-4164-a61f-6e7b05337921
+# ╠═17a07378-f4d8-4795-9d59-9a506a7c8885
+# ╠═60a5fd96-7db2-46a5-ae3c-1de17dbc60d7
+# ╠═0b9580a8-0341-4792-b4ba-f78a96e26cb6
+# ╠═74eff70c-e897-4cad-8127-42c95d93c9f8
+# ╠═4c93a9c7-982b-4d88-bcee-97b5a99c4533
+# ╠═a8954306-63b4-490f-abba-b28932b572b1
+# ╠═093e59f6-e4c8-49b9-b60c-73892d721dfb
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

@@ -216,7 +216,7 @@ initialp = 6.2e6
     thermal_expansion = 0
   []
   [co2]
-    type = IdealGasFluidProperties
+    type = CO2FluidProperties
   []
   [tabulated]
     type = TabulatedBicubicFluidProperties
