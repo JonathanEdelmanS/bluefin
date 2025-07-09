@@ -14,651 +14,465 @@ macro bind(def, element)
     end
 end
 
-# ╔═╡ 35df67ca-7b6a-11ef-1fee-25fe0c894509
-using PlutoUI, Plots, DataFrames, CSV,  Plots.PlotMeasures 
+# ╔═╡ 397ddfa1-c66e-424b-858c-944f5a516935
+using PlutoUI
 
-# ╔═╡ cec903b7-37b2-44f8-b106-521badf175af
+# ╔═╡ 11739b2d-b57c-4b1e-b3a4-eefc17941efb
+using Plots
 
+# ╔═╡ f6cd902c-7c0c-48d4-99c8-a3d23dae5585
+module m
+	    # critical terms and values for CO2
+	    tc = 304.1282;              # critical temperature in K
+	    pc = 7.3773;                # critical pressure in MPa
+	    rhoceos = 446.62;           # critical density in kg/m3
+	    rhoc = 467.6;               # critical density in kg/m3
+	    rmol = 8.314510;            # molar gas constant in j/mol/k
+	    molwt = 44.0098;            # molecular weight in g/mol
+	    r = rmol/molwt * 1e3;             # specific gas constant in j/kg/K
+	    # n constants
+	    n1 = 0.89875108; n2 = -2.1281985; n3 = -0.068190320; n4 = 0.076355306;
+	    n5 = 0.00022053253; n6 = 0.41541823; n7 = 0.71335657; n8 = 0.00030354234;
+	    n9 = -0.36643143; n10 = -0.0014407781; n11 = -0.089166707; n12 = -0.023699887;
+	    # d constants
+	    d1 = 1.00; d2 = 1.00; d3 = 1.00; d4 = 3.00; d5 = 7.00; d6 = 1.00;
+	    d7 = 2.00; d8 = 5.00; d9 = 1.00; d10 = 1.00; d11 = 4.00; d12 = 2.00;
+	    # t constants
+	    t1 = 0.25; t2 = 1.25; t3 = 1.50; t4 = 0.25; t5 = 0.875; t6 = 2.375; t7 = 2.00;
+	    t8 = 2.125; t9 = 3.50; t10 = 6.50; t11 = 4.75; t12 = 12.50;
+	    # p constants
+	    p6 = 1.0; p7 = 1.0; p8 = 1.0; p9 = 2.0; p10 = 2.0; p11 = 2.0; p12 = 3.0;
+	    # a constants
+	    a1 = 8.37304456; a2 = -3.70454304; a3 = 2.5; a4 = 1.99427042;
+	    a5 = 0.62105248; a6 = 0.41195293; a7 = 1.04028922; a8 = 0.08327678;
+	    # theta constants
+	    th4 = 3.15163; th5 = 6.1119; th6 = 6.77708; th7 = 11.32384; th8 = 27.08792;
+	end
 
-# ╔═╡ 6fbc76e9-1114-4a50-9312-b61d53be5bd5
-timesSimple = CSV.read("../problems/Laforce/2D_SimpleFluid_csv.csv", comment="#", DataFrame).time[100]
-
-# ╔═╡ 40a6041a-87fd-453a-b6aa-29a457738c82
-timesIdeal = CSV.read("../problems/Laforce/2D_IdealFluid_csv.csv", comment="#", DataFrame).time
-
-# ╔═╡ c76be259-f430-4116-8b3a-1ac362f40e19
-timesIdeal[133]
-
-# ╔═╡ 280343bb-e975-4265-93af-cdabe79a93d2
-CSV.read("../problems/Laforce/2D_SWFluid_csv.csv", comment="#", DataFrame)
-
-# ╔═╡ f0215f50-03e8-4df5-b655-03d9fd98a645
-checktime = 2.4054677218253e6
-
-
-# ╔═╡ 73f9c2e3-5ddf-4866-ac1d-7db45916b1c6
-#timesSW = CSV.read("../problems/Laforce/2D_SW_csv.csv", comment="#", DataFrame)#.time
-
-# ╔═╡ c9db5bfa-53ee-4a1e-932a-02e51804e61c
-times[20]
-
-# ╔═╡ 7a47f32c-1d2b-404c-a503-885ca5bea2f1
-function propheatmap(prop, timesteps; plotme=true)
-		
-		plot(xlabel = "time", ylabel = "radius", yscale = :log10, right_margin = 10mm)
-		allgas=[]
-		radii=[]
-		for t in 1:timesteps
-			file=("000" * string(t))[end-3:end]
-			curtime = CSV.read("../problems/Laforce/2D_SimpleFluid_csv_ptsuss_"*file*".csv", comment="#", DataFrame)
-			push!(radii, curtime.x)
-			push!(allgas, curtime[!, prop])
-
-		end
-		(allgas)
-		
-		allgas=hcat(allgas...)
-		if !(plotme)
-			return times,radii,allgas
-		end
-		#heatmap!(times[2:timesteps+1], radii[:], allgas[:,:], title = names * " " * prop)
-		
-		return allgas
-		
-
-end
-
-# ╔═╡ 2982a6b6-3044-436c-9fd4-b43a8596cf6a
-cdisp = (-.00005, .00046)
-
-# ╔═╡ d202192e-0e01-4fe5-b84d-673cfb77f1b9
-csgas= (0 , .8)
-
-# ╔═╡ 78c561cf-984d-43fd-9edc-51e5c0c037d3
-cp = (6.2, 7.6)
-
-# ╔═╡ fced5727-e0a3-467c-a0c8-1df944ff31ca
-ct = (300, 301.4)
-
-# ╔═╡ 8b9f56c7-2663-4ca5-8244-a97e59325bc2
-
-
-# ╔═╡ 7a0f593c-64fe-4f9e-ba0b-dd57895fdaec
-
-
-# ╔═╡ 32ad35d3-f1cc-4973-b1c1-d017753c6a6f
-function propheatmapSW(prop, timesteps; plotme=true)
-		
-		plot(xlabel = "time", ylabel = "radius", yscale = :log10, right_margin = 10mm)
-		allgas=[]
-		radii=[]
-		for t in 1:timesteps
-			file=("000" * string(t))[end-3:end]
-			curtime = CSV.read("../problems/Laforce/2D_SWFluid_csv_ptsuss_"*file*".csv", comment="#", DataFrame)
-			push!(radii, curtime.x)
-			push!(allgas, curtime[!, prop])
-
-		end
-		(allgas)
-		
-		allgas=hcat(allgas...)
-		if !(plotme)
-			return times,radii,allgas
-		end
-		#heatmap!(times[2:timesteps+1], radii[:], allgas[:,:], title = names * " " * prop)
-		
-		return allgas
-		
-
-end
-
-# ╔═╡ 4f3c5226-7f0d-42fe-8849-dfc3d4b7e233
-heatmap(propheatmapSW("temp", 177)[1:end, 1:end])
-
-# ╔═╡ 987de347-3b29-4bd1-ac65-3609348e3680
-heatmap(propheatmapSW("sgas", 177)[1:end, 1:end])
-
-# ╔═╡ 41a71969-14f0-45f7-b989-e1e36bc6c484
-plot(propheatmapSW("pwater", 192)[40,:])
-
-# ╔═╡ 4a584c43-790d-48c3-b93d-36db6ec50d49
-plot(propheatmapSW("sgas", 192)[:,190])
-
-# ╔═╡ 5f6cd114-16a4-467e-87b0-a167391109bb
-propheatmapSW("temp", 177)
-
-# ╔═╡ efb75b38-09bb-4c65-a805-e7b447c2f4c4
-propheatmapSW("pwater", 177)[3:end, 3:end]
-
-# ╔═╡ da633dc5-1b3c-431d-8f2a-d6968b60e600
-propheatmapSW("pwater", 177)[3:end, 3:end]
-
-# ╔═╡ fbd8d6db-11da-4f93-9f33-f8d2136ced5a
-function propheatmapIdeal(prop, timesteps; plotme=true)
-		
-		plot(xlabel = "time", ylabel = "radius", yscale = :log10, right_margin = 10mm)
-		allgas=[]
-		radii=[]
-		for t in 1:timesteps
-			file=("000" * string(t))[end-3:end]
-			curtime = CSV.read("../problems/Laforce/2D_IdealFluid_csv_ptsuss_"*file*".csv", comment="#", DataFrame)
-			push!(radii, curtime.x)
-			push!(allgas, curtime[!, prop])
-
-		end
-		(allgas)
-		
-		allgas=hcat(allgas...)
-		if !(plotme)
-			return times,radii,allgas
-		end
-		#heatmap!(times[2:timesteps+1], radii[:], allgas[:,:], title = names * " " * prop)
-		
-		return allgas
-		
-
-end
-
-# ╔═╡ 86d9e6f1-80a8-489a-95e1-3ab76b3ff303
-heatmap(propheatmapIdeal("temp", 177)[1:end, 1:end])
-
-# ╔═╡ 822b8c35-82d3-420b-9f12-0a64686a8b09
-propheatmapIdeal("sgas", 177)
-
-# ╔═╡ 33e31d67-3daf-4b8a-a14c-8bbe36be713e
-heatmap(propheatmapIdeal("sgas", 177)[1:end, 1:end])
-
-# ╔═╡ f600417a-1177-4003-8d87-b2c1765565b7
+# ╔═╡ 7f91bcda-0f38-11f0-139f-7743c14aaa2d
 begin
-	p = (propheatmapIdeal("pwater", 275))[3:end,3:end]
-	T = (propheatmapIdeal("temp", 275))[3:end,3:end]
-	sgas = (propheatmapIdeal("sgas", 275))[3:end,3:end]
-	dispr = (propheatmapIdeal("disp_r", 275))[3:end,3:end]
+	#--------------------------------------------------------------------------
+	# All the subsequent functions are calculated based on equations from span
+	# wagner book/ papers (reduced form and full form)
+	    # Function to calculate alpha residual
+	    function alfr(tau,del)
+	        alphar1 = m.n1*del^m.d1*tau^m.t1+m.n2*del^m.d2*tau^m.t2+m.n3*del^m.d3*tau^m.t3+m.n4*del^m.d4*tau^m.t4+m.n5*del^m.d5*tau^m.t5;
+	        alphar2 = m.n6*del^m.d6*tau^m.t6*exp(-del^m.p6)+m.n7*del^m.d7*tau^m.t7*exp(-del^m.p7);
+	        alphar3 = m.n8*del^m.d8*tau^m.t8*exp(-del^m.p8)+m.n9*del^m.d9*tau^m.t9*exp(-del^m.p9)+m.n10*del^m.d10*tau^m.t10*exp(-del^m.p10);
+	        alphar4 = m.n11*del^m.d11*tau^m.t11*exp(-del^m.p11)+m.n12*del^m.d12*tau^m.t12*exp(-del^m.p12);
+	        alphar = alphar1+alphar2+alphar3+alphar4;
+	        return alphar
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate differential of alpha residual w.r.t delta
+	    function dalfrdel(tau,del)
+	        alphar1 = m.n1*m.d1*del^(m.d1-1.0)*tau^m.t1+m.n2*m.d2*del^(m.d2-1.0)*tau^m.t2+m.n3*m.d3*del^(m.d3-1.0)*tau^m.t3;
+	        alphar2 = m.n4*m.d4*del^(m.d4-1.0)*tau^m.t4+m.n5*m.d5*del^(m.d5-1.0)*tau^m.t5;
+	        alphar3 = m.n6*del^(m.d6-1.0)*(m.d6-m.p6*del^m.p6)*tau^m.t6*exp(-del^m.p6)+m.n7*del^(m.d7-1.0)*(m.d7-m.p7*del^m.p7)*tau^m.t7*exp(-del^m.p7);
+	        alphar4 = m.n8*del^(m.d8-1.0)*(m.d8-m.p8*del^m.p8)*tau^m.t8*exp(-del^m.p8)+m.n9*del^(m.d9-1.0)*(m.d9-m.p9*del^m.p9)*tau^m.t9*exp(-del^m.p9);
+	        alphar5 = m.n10*del^(m.d10-1.0)*(m.d10-m.p10*del^m.p10)*tau^m.t10*exp(-del^m.p10)+m.n11*del^(m.d11-1.0)*(m.d11-m.p11*del^m.p11)*tau^m.t11*exp(-del^m.p11);
+	        alphar6 = m.n12*del^(m.d12-1.0)*(m.d12-m.p12*del^m.p12)*tau^m.t12*exp(-del^m.p12);
+	        alphar = alphar1+alphar2+alphar3+alphar4+alphar5+alphar6;
+	        return alphar
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate  double differential of alpha residual w.r.t delta
+	    function d2alfrdel(tau,del)
+	        alphar1 = m.n1*m.d1*(m.d1-1.0)*del^(m.d1-2.0)*tau^m.t1+m.n2*m.d2*(m.d2-1.0)*del^(m.d2-2.0)*tau^m.t2+m.n3*m.d3*(m.d3-1.0)*del^(m.d3-2.0)*tau^m.t3;
+	        alphar2 = m.n4*m.d4*(m.d4-1.0)*del^(m.d4-2.0)*tau^m.t4+m.n5*m.d5*(m.d5-1.0)*del^(m.d5-2.0)*tau^m.t5;
+	        alphar6 = m.n6*del^(m.d6-2.0)*((m.d6-m.p6*del^m.p6)*(m.d6-1.0-m.p6*del^m.p6)-m.p6^2.0*del^m.p6)*tau^m.t6*exp(-del^m.p6);
+	        alphar7 = m.n7*del^(m.d7-2.0)*((m.d7-m.p7*del^m.p7)*(m.d7-1.0-m.p7*del^m.p7)-m.p7^2.0*del^m.p7)*tau^m.t7*exp(-del^m.p7);
+	        alphar8 = m.n8*del^(m.d8-2.0)*((m.d8-m.p8*del^m.p8)*(m.d8-1.0-m.p8*del^m.p8)-m.p8^2.0*del^m.p8)*tau^m.t8*exp(-del^m.p8);
+	        alphar9 = m.n9*del^(m.d9-2.0)*((m.d9-m.p9*del^m.p9)*(m.d9-1.0-m.p9*del^m.p9)-m.p9^2.0*del^m.p9)*tau^m.t9*exp(-del^m.p9);
+	        alphar10 = m.n10*del^(m.d10-2.0)*((m.d10-m.p10*del^m.p10)*(m.d10-1.0-m.p10*del^m.p10)-m.p10^2.0*del^m.p10)*tau^m.t10*exp(-del^m.p10);
+	        alphar11 = m.n11*del^(m.d11-2.0)*((m.d11-m.p11*del^m.p11)*(m.d11-1.0-m.p11*del^m.p11)-m.p11^2.0*del^m.p11)*tau^m.t11*exp(-del^m.p11);
+	        alphar12 = m.n12*del^(m.d12-2.0)*((m.d12-m.p12*del^m.p12)*(m.d12-1.0-m.p12*del^m.p12)-m.p12^2.0*del^m.p12)*tau^m.t12*exp(-del^m.p12);
+	        alphar = alphar1+alphar2+alphar6+alphar7+alphar8+alphar9+alphar10+alphar11+alphar12;
+	        return alphar;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate differential of alpha residual w.r.t tau
+	    function dalfrtau(tau,del)
+	        alphar1 = m.n1*m.t1*del^m.d1*tau^(m.t1-1.0)+m.n2*m.t2*del^m.d2*tau^(m.t2-1.0)+m.n3*m.t3*del^m.d3*tau^(m.t3-1.0);
+	        alphar2 = m.n4*m.t4*del^m.d4*tau^(m.t4-1.0)+m.n5*m.t5*del^m.d5*tau^(m.t5-1.0);
+	        alphar3 = m.n6*m.t6*del^m.d6*tau^(m.t6-1.0)*exp(-del^m.p6)+m.n7*m.t7*del^m.d7*tau^(m.t7-1.0)*exp(-del^m.p7);
+	        alphar4 = m.n8*m.t8*del^m.d8*tau^(m.t8-1.0)*exp(-del^m.p8)+m.n9*m.t9*del^m.d9*tau^(m.t9-1.0)*exp(-del^m.p9);
+	        alphar5 = m.n10*m.t10*del^m.d10*tau^(m.t10-1.0)*exp(-del^m.p10)+m.n11*m.t11*del^m.d11*tau^(m.t11-1.0)*exp(-del^m.p11);
+	        alphar6 = m.n12*m.t12*del^m.d12*tau^(m.t12-1.0)*exp(-del^m.p12);
+	        alphar = alphar1+alphar2+alphar3+alphar4+alphar5+alphar6;
+	        return alphar;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate double differential of alpha residual w.r.t tau
+	    function d2alfrtau(tau,del)
+	        alphar1 = m.n1*m.t1*(m.t1-1.0)*del^m.d1*tau^(m.t1-2.0)+m.n2*m.t2*(m.t2-1.0)*del^m.d2*tau^(m.t2-2.0)+m.n3*m.t3*(m.t3-1.0)*del^m.d3*tau^(m.t3-2.0);
+	        alphar2 = m.n4*m.t4*(m.t4-1.0)*del^m.d4*tau^(m.t4-2.0)+m.n5*m.t5*(m.t5-1.0)*del^m.d5*tau^(m.t5-2.0);
+	        alphar3 = m.n6*m.t6*(m.t6-1.0)*del^m.d6*tau^(m.t6-2.0)*exp(-del^m.p6)+m.n7*m.t7*(m.t7-1.0)*del^m.d7*tau^(m.t7-2.0)*exp(-del^m.p7);
+	        alphar4 = m.n8*m.t8*(m.t8-1.0)*del^m.d8*tau^(m.t8-2.0)*exp(-del^m.p8)+m.n9*m.t9*(m.t9-1.0)*del^m.d9*tau^(m.t9-2.0)*exp(-del^m.p9);
+	        alphar5 = m.n10*m.t10*(m.t10-1.0)*del^m.d10*tau^(m.t10-2.0)*exp(-del^m.p10)+m.n11*m.t11*(m.t11-1.0)*del^m.d11*tau^(m.t11-2.0)*exp(-del^m.p11);
+	        alphar6 = m.n12*m.t12*(m.t12-1.0)*del^m.d12*tau^(m.t12-2.0)*exp(-del^m.p12);
+	        alphar = alphar1+alphar2+alphar3+alphar4+alphar5+alphar6;
+	        return alphar;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate double differential of alpha residual w.r.t tau and delta
+	    function d2alfrdeltau(tau,del)
+	        alphar1 = m.n1*m.d1*m.t1*del^(m.d1-1.0)*tau^(m.t1-1.0)+m.n2*m.d2*m.t2*del^(m.d2-1.0)*tau^(m.t2-1.0)+m.n3*m.d3*m.t3*del^(m.d3-1.0)*tau^(m.t3-1.0);
+	        alphar2 = m.n4*m.d4*m.t4*del^(m.d4-1.0)*tau^(m.t4-1.0)+m.n5*m.d5*m.t5*del^(m.d5-1.0)*tau^(m.t5-1.0);
+	        alphar3 = m.n6*m.t6*del^(m.d6-1.0)*(m.d6-m.p6*del^m.p6)*tau^(m.t6-1.0)*exp(-del^m.p6)+m.n7*m.t7*del^(m.d7-1.0)*(m.d7-m.p7*del^m.p7)*tau^(m.t7-1.0)*exp(-del^m.p7);
+	        alphar4 = m.n8*m.t8*del^(m.d8-1.0)*(m.d8-m.p8*del^m.p8)*tau^(m.t8-1.0)*exp(-del^m.p8)+m.n9*m.t9*del^(m.d9-1.0)*(m.d9-m.p9*del^m.p9)*tau^(m.t9-1.0)*exp(-del^m.p9);
+	        alphar5 = m.n10*m.t10*del^(m.d10-1.0)*(m.d10-m.p10*del^m.p10)*tau^(m.t10-1.0)*exp(-del^m.p10)+m.n11*m.t11*del^(m.d11-1.0)*(m.d11-m.p11*del^m.p11)*tau^(m.t11-1.0)*exp(-del^m.p11);
+	        alphar6 = m.n12*m.t12*del^(m.d12-1.0)*(m.d12-m.p12*del^m.p12)*tau^(m.t12-1.0)*exp(-del^m.p12)
+	        alphar = alphar1+alphar2+alphar3+alphar4+alphar5+alphar6;
+	        return alphar;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate standard state alphao
+	    function alfo(tau,del)
+	        alphao1 = log(del)+m.a1+m.a2*tau+m.a3*log(tau);
+	        alphao2 = m.a4*log(1.0-exp(-tau*m.th4))+m.a5*log(1.0-exp(-tau*m.th5))+m.a6*log(1.0-exp(-tau*m.th6));
+	        alphao3 = m.a7*log(1.0-exp(-tau*m.th7))+m.a8*log(1.0-exp(-tau*m.th8));
+	        alphao = alphao1+alphao2+alphao2;
+	        return alphao
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate differential of alphao w.r.t tau
+	
+	    function dalfotau(tau,del)
+	        alphao1 = m.a2+m.a3/tau;
+	        alphao2 = m.a4*m.th4*(1.0/(1.0-exp(-tau*m.th4))-1.0)+m.a5*m.th5*(1.0/(1.0-exp(-tau*m.th5))-1.0)+m.a6*m.th6*(1.0/(1.0-exp(-tau*m.th6))-1.0);
+	        alphao3 = m.a7*m.th7*(1.0/(1.0-exp(-tau*m.th7))-1.0)+m.a8*m.th8*(1.0/(1.0-exp(-tau*m.th8))-1.0);
+	        alphao = alphao1+alphao2+alphao3;
+	        return alphao;
+	    end
+	
+	#--------------------------------------------------------------------------
+	    # Function to calculate double differential of alphao w.r.t tau
+	    function d2alfotau(tau,del)
+	        alphao1 = -m.a3/tau^2.0-m.a4*m.th4^2.0*exp(-tau*m.th4)*(1.0/(1.0-exp(-tau*m.th4))^2.0);
+	        alphao2 = m.a5*m.th5^2.0*exp(-tau*m.th5)*(1.0/(1.0-exp(-tau*m.th5))^2.0)+m.a6*m.th6^2.0*exp(-tau*m.th6)*(1.0/(1.0-exp(-tau*m.th6))^2.0);
+	        alphao3 = m.a7*m.th7^2.0*exp(-tau*m.th7)*(1.0/(1.0-exp(-tau*m.th7))^2.0)+m.a8*m.th8^2.0*exp(-tau*m.th8)*(1.0/(1.0-exp(-tau*m.th8))^2.0);
+	        alphao = alphao1-alphao2-alphao3;
+	        return alphao;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate differential of alphao w.r.t delta
+	    function dalfodel(tau,del)
+	        alphao = 1.0/del;
+	        return alphao;
+	    end
+	#--------------------------------------------------------------------------
+	    # Function to calculate double differential of alphao w.r.t delta
+	    function d2alfodel(tau,del)
+	        alphao = -1.0/del^2.0;
+	        return alphao;
+	    end
+	#--------------------------------------------------------------------------
+	# Function to solve for density
+	# Newton-Raphson algorithm over del. Will generate two different
+	# results based on initial guesses.
+	function densol(p,t,dguess)
+	    count2 = 0;
+	    maxval = 100;
+	    dold = dguess;
+	    dnew = 0.1;
+	    tau = m.tc/t;
+	    tol = 1.0e-7;
+	    fold = (p/m.rhoc/dold/m.r/t)-1.0-dold*dalfrdel(tau,dold);
+	    fdash = -(p/m.rhoc/dold^2.0/m.r/t)-dalfrdel(tau,dold)-dold*d2alfrdel(tau,dold);
+	    for i in 1:maxval
+	        if dold < 0.0 || dold > 3.0
+	            if dguess < 1.0
+	                dnew = 0.4;
+	                count2 = count2 +1;
+	            else
+	                dnew = 1.3;
+	                count2 = count2 +1;
+	            end
+	        else
+	            dnew = dold-fold/fdash;
+	        end
+	        fnew = (p/m.rhoc/dnew/m.r/t)-1.0-dnew*dalfrdel(tau,dnew);
+	        fdash = -(p/m.rhoc/dnew^2.0/m.r/t)-dalfrdel(tau,dnew)-dnew*d2alfrdel(tau,dnew);
+	        if abs(fnew) < tol
+	            break
+	        else
+	            dold = dnew;
+	            fold = fnew;
+	        end
+	        if i == maxval || count2 == 2
+	            dnew = 10.0;
+	            break
+	        end
+	    end
+	    del = dnew;
+	    fugacity = exp(alfr(tau,del)+del*dalfrdel(tau,del)-log(1.0+del*dalfrdel(tau,del)));
+	    den = del*m.rhoc;
+	    return den, fugacity;
+	end
+	#--------------------------------------------------------------------------
+	# Phase equilibrium solver
+	function swdenco2(p,t)
+	    (deng, fugg) = densol(p,t,0.001);
+	    (denl, fugl) = densol(p,t,2.0);
+	    # Check if the densities are the same
+	    errd::Float64 = abs(deng-denl)::Float64;
+	    if errd < 1.0e-3
+	        if deng <= m.rhoceos
+	            fugl = 10000000.0;
+	        else
+	            fugg = 10000000.0;
+	        end
+	    end
+	    errf::Float64 = abs(fugg-fugl);
+	    if errf < 1.0e-7
+	        deng = deng;
+	        denl = denl;
+	    elseif fugg < fugl
+	        deng = deng;
+	        denl = 0.0;
+	    else
+	        deng = 0.0;
+	        denl = denl;
+	    end
+	    #den::Tuple{deng::Float64,::Float64};
+	    den = (deng,denl);      # density is in kg/m3
+	    #println("density = $den")
+	    return den;
+	end
+	#--------------------------------------------------------------------------
+	#Fugacity calculator
+	function swfugco2(p,t)
+	    den = swdenco2(p,t)
+	    tau = m.tc/t;
+	    del = den./m.rhoc;
+	    fugacity = zeros(2);
+	    for i in 1:2
+	        if del[i] == 0.0
+	            fugacity[i] = 0.0;
+	        else
+	            fugacity[i] = exp(alfr(tau,del[i])+del[i]*dalfrdel(tau,del[i])-log(1.0+del[i]*dalfrdel(tau,del[i])));
+	        end
+	    end
+	    return fugacity
+	end
+	#--------------------------------------------------------------------------
+	#joule-thomson coefficient
+	function swjt(p,t)
+	    den = swdenco2(p,t);
+	    tau = m.tc/t;
+	    del = den./m.rhoc;
+	    jt = zeros(2);
+	    for i in 1:2
+	        if del[i] == 0.0
+	            jt[i] = 0.0;
+	        else
+	            jt[i] = -1.005*1000.0*(1.0/m.r/den[i])*(del[i]*dalfrdel(tau,del[i])+del[i]^2.0*d2alfrdel(tau,del[i])+tau*del[i]*d2alfrdeltau(tau,del[i]))*((1.0+del[i]*dalfrdel(tau,del[i])-tau*del[i]*d2alfrdeltau(tau,del[i]))^2.0-tau^2.0*(d2alfotau(tau,del[i])+d2alfrtau(tau,del[i]))*(1.0+2.0*del[i]*dalfrdel(tau,del[i])+del[i]^2.0*d2alfrdel(tau,del[i])))^-1.0;
+	        end
+	    end
+	    jtout = (jt[1], jt[2]); # joule-thomson coefficient is in K/MPa
+	    return jtout
+	end
+	#--------------------------------------------------------------------------
+	
 end
 
-# ╔═╡ 2d56c58c-e791-4da8-aea9-864a1ec2731c
-T
+# ╔═╡ 29449322-3995-411f-b425-b44b0368ebd5
+begin
+	function swpco2(ρ,T, SW_Coef = 1)
+		tau = m.tc/T;
+		del = ρ/m.rhoc
+		return m.r * T * ρ * (1 + SW_Coef * del * dalfrdel(tau,del))
+	end
+	function swdpdρ(ρ,T, SW_Coef = 1)
+		tau = m.tc/T;
+		del = ρ/m.rhoc
+		return (m.r* T * (1 + SW_Coef * del * dalfrdel(tau,del)) + SW_Coef * m.r * ρ * T *(dalfrdel(tau,del) + del * d2alfrdel(tau,del))/m.rhoc)
+	end
+	function swdpdT(ρ,T, SW_Coef = 1)
+		tau = m.tc/T;
+		del = ρ/m.rhoc
+		return (m.r * ρ * (1 + SW_Coef * (del * dalfrdel(tau,del) - del * tau * d2alfrdeltau(tau,del))))
+	end
+end
 
-# ╔═╡ 9a77fd1a-7efb-48f7-86fb-c4b25f8fdb7d
-T
+# ╔═╡ d6fec056-9017-4723-b4b0-f03f4b86351e
+ maximum(swdenco2(30,450))
 
-# ╔═╡ c6681149-6809-4548-8497-c84682a7e644
-plot(propheatmapSW("pwater", 184)[:,184])
+# ╔═╡ 07bd7b98-a52c-45be-bde3-a15f07bbd9e9
+swdenco2(12.41,210)
 
-# ╔═╡ 817fc84d-01fc-42c4-bcc4-e7468838ac74
+# ╔═╡ 62364d50-bf23-4043-aa76-36b657eb9df5
+let
+	plot()
+	pressures = .1:.1:30
+	Temps = 250:10:450
+	for T in Temps
+		ρ = [maximum(swdenco2(p,T)) for p in pressures]
+		plot!(pressures,ρ, label="$T  K")
+	end
+	plot!(xlabel = "pressure in MPa", ylabel = "density in kg/m3", legend=false)
+end
+
+# ╔═╡ 70b5d1b1-a218-4e06-a4a3-0a8403d89b8c
+let
+	plot()
+	pressures = 6.8e6:1e3:6.9e6
+	Temps = 301:2:301
 
 
-# ╔═╡ b262f86d-9718-4ccc-8bc9-ed06176c3e59
+	for T in Temps
+		ρ = [maximum(swdenco2(p,T)) for p in pressures]
+		plot!(pressures ./1e6,ρ, label=false, color = get(cgrad([:blue, :magenta, :red]),(T-293)/20), linestyle=:dash)
+	end
+	plot!(xlabel = "p (MPa)", ylabel = "ρ (kg/m3)", xlims = (6.8, 6.9))
+
+	p=6.865136670169e6
+	scatter!([p/1e6], [maximum(swdenco2(p,301))])
+
+end
+
+# ╔═╡ e6b42ce2-4e98-4839-bd4d-83cca6dd8121
+6.8655440241922e6
+
+
+# ╔═╡ 171fb27f-10be-462a-8615-da3716aa6983
+let
+	plot()
+	ρs = 1:1300
+	Temps = 400:10:450
+	for T in Temps
+		p = [swpco2(ρ, T) for ρ in ρs]
+		plot!(p ./ 1e6,ρs, label="$T  K")
+	end
+	plot!(xlabel = "pressure in MPa", ylabel = "density in kg/m3", xlims = (0, 20),legend=false)
+
+	
+	pressures = 10e6:1e5:20e6
+	for T in Temps
+		ρ = [maximum(swdenco2(p,T)) for p in pressures]
+		plot!(pressures./1e6,ρ, label="$T  K")
+	end
+	plot!(xlabel = "pressure in MPa", ylabel = "density in kg/m3", legend=false)
+end
+
+# ╔═╡ 584cd8e2-a074-45c1-bc46-b5fbec4d44bd
+swdenco2(1e5,400)
+
+# ╔═╡ 1008c9f9-14b3-4cb7-a415-3e1bca786415
+swdenco2(5, 310)
+
+# ╔═╡ 114c2660-1455-4e10-9d9b-9bb65cc92e33
+swdenco2(20,450)
+
+# ╔═╡ 0b2591e5-2ad1-4d66-86cc-aac133e87a70
+swpco2(285.517,450)
+
+# ╔═╡ 71fe4003-892b-4e35-9011-b9e95404ba09
+
+
+# ╔═╡ 870f8ec9-ef61-4b49-b85d-d0b69c5b758f
+swpco2(swdenco2(1.8,250)[2],250)
+
+# ╔═╡ cd6dbf33-cc65-4594-9e74-2675bc71f807
+#ρs =  hcat(([maximum(swdenco2(p,T)) for p in pressures] for T in Temps)...)
+
+# ╔═╡ 2783db8e-38d2-4127-823c-13709606ffc8
+igdenco2(p,t) = p/(m.r*t)
+
+# ╔═╡ 1bdc81ea-5f64-4601-a8e6-59b637de9059
+let
+	plot()
+	pressures = .1:.1:30
+	Temps = 250:10:450
+	for T in Temps
+		ρ = [igdenco2(p,T) for p in pressures]
+		plot!(pressures,ρ, label="$T  K")
+	end
+	plot!(xlabel = "pressure in MPa", ylabel = "density in kg/m3", legend=false)
+end
+
+# ╔═╡ 0ba1f15c-1eb3-4eed-87d2-31a7318b46c7
+swpco2(1315.84, 220)
+
+# ╔═╡ 70502f8e-234e-442e-97ba-59d57895ab9d
+swdenco2(120, 210)
+
+# ╔═╡ 9933f736-3d3c-4d41-b3d5-06c38377361c
+let
+	plot()
+	ρs = 1:1:1200
+	Temps = 300:2:320
+	for T in Temps
+		p = [swpco2(ρ,T) for ρ in ρs]
+		plot!(p,ρs, label="$T  K")
+	end
+	plot!(xlabel = "pressure in MPa", ylabel = "density in kg/m3", xlims = (0
+	,30), ylims=(100,150))
+end
+
+# ╔═╡ 1dee3fd0-6bf2-4347-b136-4378f0695971
 1+1
 
-# ╔═╡ d05e7286-6809-4060-87e6-5323def352dc
-begin
-	sgasideal=propheatmapIdeal("sgas", 202)
-	sgasSW = propheatmapSW("sgas", 185)
+# ╔═╡ f60d76eb-07d2-4f7a-92d8-419d4e1e5829
+@bind SWcoef Slider(0:.1:1)
 
-	pwaterideal=propheatmapIdeal("pwater", 202)
-	pwaterSW = propheatmapSW("pwater", 185)
-end
-
-# ╔═╡ 868e44d3-bc76-4903-b34b-a8bea7110071
-begin
-	plot(sgasideal[:, 10])
-	plot!(sgasideal[:, 20])
-	plot!(sgasideal[:, 30])
-	plot!(sgasideal[:, 40], xlims = (0,6))
-	plot!(sgasideal[:, 50], xlims = (0,6))
-	plot!(sgasideal[:, 100], xlims = (0,10))
-end
-
-# ╔═╡ 7c2d62bc-e801-4cfd-85c6-691e1602f48e
-begin
-	plot(sgasideal[:, 76])
-	plot!(sgasSW[:, 60])
-end
-
-# ╔═╡ 7abe6e2f-8502-4fe5-bd91-95846eeeb855
-begin
-	plot(sgasSW[:, 10])
-	plot!(sgasSW[:, 20])
-	plot!(sgasSW[:, 30])
-	plot!(sgasSW[:, 40], xlims = (0,6))
-	plot!(sgasSW[:, 50], xlims = (0,6))
-	plot!(sgasSW[:, 60], xlims = (0,10))
-end
-
-# ╔═╡ 2f2cdcb4-4d4e-4ba0-b71e-f3d0a153055d
-pwaterideal[1,1]
-
-# ╔═╡ eb5d773a-751e-430e-8e7c-405ca8c24162
-plot()
-
-# ╔═╡ f9da8a17-eb9d-4822-97eb-d6c194e9c921
-plot(propheatmapSW("sgas", 30)[1,:])
-
-
-
-# ╔═╡ 10eaa511-2ea8-4a4a-acf9-aff9712c45a5
-pbhSW=CSV.read("../problems/Laforce/2D_SWFluid_csv.csv", comment="#", DataFrame)
-
-# ╔═╡ cca25fe5-2231-44c5-96aa-23eaa9ceb5ed
-timesSW = pbhSW.time
-
-# ╔═╡ 417a3445-c4a1-41f2-91e9-8e5c25bc2a78
-timesSW[133]
-
-# ╔═╡ 8c1f1e43-03c0-4028-afae-37b4f18eb900
-timesSW[1:185] == timesIdeal[1:185]
-
-# ╔═╡ 46ace5d0-157b-4ed5-ab3e-9c751b28e643
-timesSW[end]
-
-# ╔═╡ 20a11185-0f55-4e10-af93-22c38966c402
-timesSW
-
-# ╔═╡ a3fc8fdb-143d-44cb-956e-147043b5a895
- propheatmapSW("temp", length(timesSW))
-
-# ╔═╡ 3f9d8246-8c4b-4993-8189-ddab9bfafcce
-length(timesSW)
-
-# ╔═╡ 7fd01ecb-de31-4f75-93d8-8bae65c04db1
-timesSW
-
-# ╔═╡ e0e668e6-2ef0-4a1b-9be2-c455603bda6e
-length(timesSW)
-
-# ╔═╡ fb4efca2-c32c-4eac-b294-88808a86289d
-length(timesSW[3:end])
-
-# ╔═╡ 3eb06f83-7e97-4a28-923c-8f91b4aec49f
-length(timesSW)
-
-# ╔═╡ 70a583b5-fcde-4914-8c9a-82dd0a0cb6bb
-timesSW[60]
-
-# ╔═╡ f684c9f3-0d27-4e4e-a89e-cd61e2becc82
-length(timesSW)
-
-# ╔═╡ d13c3138-47e9-4c37-b48d-9e7f2de99e83
-length(timesSW)
-
-# ╔═╡ 11b115f8-6584-4056-add0-dfb513a61c17
-plot(timesSW[2:end], propheatmapSW("sgas", 150)[1,2:end], xscale=:log10)
-
-
-# ╔═╡ 0d8c1538-9b96-4616-8b06-ad12e0920dc2
-pbhSW
-
-# ╔═╡ 95c24e48-ea71-4f4f-b971-d0a9a553349f
-6.8655440241922e6 - 8650503
-
-
-# ╔═╡ d53d1054-5561-4793-ab3c-f1e178c74d12
-maximum(pbhSW.p_bh)
-
-# ╔═╡ cf3bf479-be14-411f-ab22-dfeba28d65b4
-begin
-	scatter(pbhSW.time[3:end], pbhSW.p_bh[3:end], xscale = :log10, xlabel="t (s)", ylabel = "Borehole pressure (MPa)", label = "Span Wagner EOS")
-	#scatter!(pbhIG.time[2:end], pbhIG.p_bh[2:end], xscale = :log10, label = "Ideal Gas EOS")
-	#vline!([100])
-end
-
-# ╔═╡ da700dd4-33c0-47e8-ab27-60cde5c8f90d
-scatter(pbhSW.time[2:end], propheatmapSW("pwater", 177)[1,2:end], xscale = :log10)
-
-# ╔═╡ 5e6433c0-0414-41e9-81b9-d07bf39435b3
-length(pbhSW.time)
-
-# ╔═╡ 1594d17b-eda0-489f-a771-0dec266ae0a7
-pbhSW.p_bh[end]
-
-# ╔═╡ 7d05436f-7026-4978-8716-8dfa41f22e98
-pbhSW.p_bh[end]
-
-# ╔═╡ 26df3569-0022-46ad-a807-db986025e02b
-
-
-# ╔═╡ ab12f5d1-f70b-41db-b286-e7dd2c262a50
-pbhSW.p_bh[4]
-
-# ╔═╡ 072a2fed-9569-4550-a0dc-4ddb6897793f
-pbhSW.time[70]
-
-# ╔═╡ c9a7bab9-a7f9-48f5-9e35-15787a48c9b7
-pbhIG=CSV.read("../problems/Laforce/2D_IdealFluid_csv.csv", comment="#", DataFrame)
-
-# ╔═╡ 29ac0639-a5be-411b-9a09-5a864e828ca1
-timesIG = pbhIG.time
-
-# ╔═╡ 768956a1-d8c2-4c7c-b58f-8f448a0b542b
-timesIG[end]
-
-# ╔═╡ fb33055d-bdd6-42a5-93f9-e5ad1ae70181
-length(timesIG)
-
-# ╔═╡ f3a43598-be74-403f-8e60-99c14f9c5ef8
+# ╔═╡ 223c6da1-6f94-43bc-aa48-0557cb339a27
 begin
 	plot()
-	plot!(timesIG[2:end], sgasideal[1,1:end], xscale=:log10, label = "IG")
-	plot!(timesSW[2:end], sgasSW[1,1:end], xscale=:log10, label = "SW", ylabel = "CO2 saturation at borehole", xlabel = "t(s)")
+	ρs = 1:1:1200
+	Temps = 250:10:450
+	for T in Temps
+		SW = [swpco2(ρ,T,SWcoef) for ρ in ρs]
+		ideal = [ρ * T * m.r / 1000 for ρ in ρs]
+		plot!(ideal,SW, label="$T  K")
+	end
+	plot!(xlabel = "ideal pressure", ylabel = "SW pressure")
+	plot!(x->x, label = "Ip = SWp")
 end
 
-# ╔═╡ 89363ecd-598f-4b71-82a7-cbcb00096a72
+# ╔═╡ 6b4a3b66-c841-4602-9209-48b35c1d69e3
 begin
-	plot()
-	plot!(timesIG[2:end], pwaterideal[1,1:end], xscale=:log10, label = "IG")
-	plot!(timesIG[2:end], pwaterideal[2,1:end], xscale=:log10, label = "IG")
-	plot!(timesIG[2:end], pwaterideal[3,1:end], xscale=:log10, label = "IG")
-	plot!(timesIG[2:end], pwaterideal[4,1:end], xscale=:log10, label = "IG")
-	
-	plot!(timesSW[2:end], pwaterSW[1,1:end], xscale=:log10, label = "SW")
-	plot!(timesSW[2:end], pwaterSW[2,1:end], xscale=:log10, label = "SW")
-	plot!(timesSW[2:end], pwaterSW[3,1:end], xscale=:log10, label = "SW")
-	plot!(timesSW[2:end], pwaterSW[4,1:end], xscale=:log10, label = "SW")
-
+	heatmap(Temps, pressures, ρs)
+	scatter!([216.8],[5.102])
 end
 
-# ╔═╡ f25c97e5-2464-494f-b513-d3a976d2fe3c
-timesIG[76]
+# ╔═╡ e507b2f4-b468-454d-a966-4d1e2b11c2f5
+igρs =  hcat(([maximum(igdenco2(p,T)) for p in pressures] for T in Temps)...)
 
-# ╔═╡ 4b4536c9-e11f-4d3f-8645-6c58e5abf2fe
-pbhIG
+# ╔═╡ af9f7987-71cb-4849-ab80-33f6d8ff55b3
+heatmap(Temps, pressures, igρs)
 
-# ╔═╡ 1342c432-fac3-4759-8404-49cd6a9b4e69
-pbhIG
+# ╔═╡ f160a1c9-8639-4cae-9ca5-a04d4eae5f31
+SWcoef
 
-# ╔═╡ 734110cf-bc29-4f59-a7d6-b024b604bd94
-begin
-	plot(pbhIG.time[2:end], pbhIG.p_bh[2:end]./1e6, xscale = :log10, label = "Ideal Gas EOS")
-	plot!(pbhSW.time[2:end], pbhSW.p_bh[2:end]./1e6, xscale = :log10, label = "Span Wagner EOS")
-	plot!(xlabel = "time (s)", ylabel = "p1(t) (MPa)", title = "p1(t),  pinf = 6.2 MPa, ρu = 1.991 kg/m^2s")
-	hline!([6.8650503], label="T=301K Liquefaction Pressure", color = :magenta)
-end
+# ╔═╡ 187321d8-feb3-45be-a747-dbf3845bc1e9
+swdpdρ(250,450)
 
-# ╔═╡ 4c25aa45-d0bb-45f8-ad4d-91c291e633d4
-pbhIG.p_bh[end]
+# ╔═╡ d7783c5e-09c0-4da0-956d-5d56ee30c43d
+swpco2(250,450) + swdpdT(250,450)
 
-# ╔═╡ deb1c4d6-a944-465d-9a61-eff1d22b6cf4
-length(pbhIG.time)
+# ╔═╡ 3016d183-422f-4af4-ac09-3104f4f4857d
+swpco2(251,450)
 
-# ╔═╡ c2ea840f-9f05-460b-8238-06db3a3f5659
-scatter(pbhIG.time[2:end], pbhIG.p_bh[2:end], xscale = :log10)
+# ╔═╡ 40a1de7b-a8e6-4c2c-82ba-4c6283594f97
+swdpdT(250,450)
 
-# ╔═╡ 4dfccd25-f62c-47c3-a631-c053bd9790da
-pbhIG.p_bh[70]
+# ╔═╡ d953058e-ce33-4694-80f9-3d96ce81c010
+swpco2(250,451)
 
-# ╔═╡ 27745b4d-154a-4157-8567-bc513b4b4e5d
-pbhIG.p_bh[4]
-
-# ╔═╡ 15916bea-3b14-42dd-8acf-d967af5aafe8
-pbhIG.time[70]
-
-# ╔═╡ 2b729232-9f94-4538-be67-14c2c3a67885
-length(pbhSW.time)
-
-# ╔═╡ 3c081ea7-7e83-40de-9a4e-ea6b61899bc7
-scatter(pbhSW.time[2:end], pbhSW.p_bh[2:end], xscale = :log10)
-
-# ╔═╡ e24467c5-3932-4462-854c-c5c6c97769b1
-pbhIG.p_bh[4]
-
-# ╔═╡ 60ff78cb-8b30-416f-a44a-5ff4456ad8b0
-pbhSW.p_bh[end]
-
-# ╔═╡ 45630dd1-068b-410c-a769-d100daf303bd
-pbh.time[3:end]
-
-# ╔═╡ 0f263cbc-109f-4503-b60c-3af6123f7f5f
-plot(propheatmapSW("pwater", 2)[:,1])
-
-# ╔═╡ 61fff211-11b3-4912-8f71-6e59ae32cec7
-begin
-	@bind t Slider(1:100)
-end
-
-# ╔═╡ 93a12eec-cc10-4fee-ab4c-5676346cd649
-file=("000" * string(t))[end-3:end]
-
-# ╔═╡ fb5f533c-f276-484e-80ff-7dee22dffbd0
-onetime = CSV.read("../problems/Laforce/2D_SimpleFluid_csv_ptsuss_"*file*".csv", comment="#", DataFrame)
-
-
-# ╔═╡ 72f49c93-3a6f-42ed-8fb3-c185a6b21552
-radii = onetime.x
-
-# ╔═╡ e00af36d-7651-4810-8b63-5769f03d6778
-heatmap(radii[1:end], timesSW[2:end],  propheatmapSW("pwater", 177)[1:end, 1:end], xscale=:log10, yscale=:log10)
-
-# ╔═╡ a7645113-3eef-40f0-9da0-6d3c73de7de4
-heatmap( timesSW[3:end], radii[2:end],  propheatmapSW("sgas", 177)[2:end, 2:end], xscale=:log10, yscale=:log10)
-
-# ╔═╡ e16e528e-ab42-47dc-a2e5-f48ff10cdac7
-heatmap(timesSW[2:end], radii[4:end], propheatmapSW("pwater", 177)[4:end, 1:end], yscale=:log10, xscale=:log10)
-
-# ╔═╡ bbda38bf-ee43-4ae8-9005-00b3e8ca19b4
-heatmap(radii, timesIG[2:end] , propheatmapIdeal("sgas", 186)[1:end, 1:end]')
-
-# ╔═╡ 151bd023-f757-4eb7-856a-25999ebf5f41
-heatmap(radii, timesIG[2:end] , propheatmapIdeal("pwater", 186)[1:end, 1:end]', yscale=:log10, xscale=:log10)
-
-# ╔═╡ 31dd8db4-73c6-4bde-a4b2-79fecd4fdada
-heatmap(radii[2:end], timesIG[2:end] , propheatmapIdeal("temp", 186)[2:end, 1:end]', yscale=:log10, xscale=:log10)
-
-# ╔═╡ 538cb857-0905-48fb-a5a5-b40134c0f9fe
-heatmap(radii[3:end], timesIG[2:end] , propheatmapIdeal("disp_r", length(timesIG)-1)[3:end, 1:end]', yscale=:log10, xscale=:log10, ylabel = "t (s)", xlabel = "r (m)", title= "Disp, Ideal Gas, pinf = 6.2 MPa",  left_margin = 13mm, right_margin = 10mm, clims = cdisp)
-
-# ╔═╡ 20057c28-2a7d-4c6c-8f7d-46afd49825c7
-heatmap(radii[3:end], timesIG[2:end] , propheatmapIdeal("sgas", length(timesIG)-1)[3:end, 1:end]', yscale=:log10, xscale=:log10, ylabel = "t (s)", xlabel = "r (m)", title= "sgas, Ideal Gas, pinf = 6.2 MPa",  left_margin = 13mm, right_margin = 10mm, clims = csgas)
-
-# ╔═╡ b09a6319-6f24-406b-8611-c34c17310b54
-heatmap(radii[3:end], timesIG[2:end] , propheatmapIdeal("pwater", length(timesIG)-1)[3:end, 1:end]'./1e6, yscale=:log10, xscale=:log10, ylabel = "t (s)", xlabel = "r (m)", title= "p (MPa), Ideal Gas, pinf = 6.2MPa",  left_margin = 13mm, right_margin = 10mm, clims = cp)
-
-# ╔═╡ 904628ac-935e-429d-a91c-d0632f7268b9
-heatmap(radii[3:end], timesIG[2:end] , propheatmapIdeal("temp",  length(timesIG)-1)[3:end, 1:end]', yscale=:log10, xscale=:log10, ylabel = "t (s)", xlabel = "r (m)", title= "Temp(K), Ideal Gas, pinf = 6.2 MPa",  left_margin = 13mm, right_margin = 10mm, clims = ct)
-
-# ╔═╡ f05f1416-80aa-4ee9-8daa-b3a9c97499de
-heatmap(radii[3:end], timesSW[2:end] , propheatmapSW("disp_r",  length(timesSW)-1)[3:end, 1:end]', yscale=:log10, xscale=:log10, ylabel = "t (s)", xlabel = "r (m)", title= "Disp, Span-Wagner, pinf = 6.2 MPa",  left_margin = 13mm, right_margin = 10mm, clims = cdisp)
-
-# ╔═╡ b323aa45-ef1e-4847-963e-2672a252e5b3
-heatmap(radii[3:end], timesSW[2:end] , propheatmapSW("sgas",  length(timesSW)-1)[3:end, 1:end]', yscale=:log10, xscale=:log10, ylabel = "t (s)", xlabel = "r (m)", title= "sgas, Span-Wagner,  pinf = 6.2 MPa",  left_margin = 13mm, right_margin = 10mm, clims = csgas)
-
-# ╔═╡ 898dbeb6-6a3d-4e88-bd2e-eb09b147f66b
-heatmap(radii[3:end], timesSW[2:end] , propheatmapSW("pwater", length(timesSW)-1)[3:end, 1:end]'./1e6, yscale=:log10, xscale=:log10, ylabel = "t (s)", xlabel = "r (m)", title= "p(MPa), Span-Wagner,  pinf = 6.2 MPa",  left_margin = 13mm, right_margin = 10mm, clims = cp)
-
-# ╔═╡ e894d08e-f5aa-4e7a-8493-2c51b4c13d07
-heatmap(radii[3:end], timesSW[2:end] , propheatmapSW("temp",  length(timesSW)-1)[3:end, 1:end]', yscale=:log10, xscale=:log10, ylabel = "t (s)", xlabel = "r (m)", title= "Temp(K), Span-Wagner, pinf = 6.2 MPa",  left_margin = 13mm, right_margin = 10mm, clims = ct)
-
-# ╔═╡ 96cc533f-941b-4748-8cc0-8933341fd50b
-radii
-
-# ╔═╡ abc74216-7d1b-45e6-9a8e-5a879d61a380
-radii
-
-# ╔═╡ f034b9e4-380b-4f8a-bcad-f81a5d990fcc
-t
-
-# ╔═╡ 2d3a6592-4585-4591-a940-91ee2118fa6e
-plot(propheatmapIdeal("pwater", t)[:,t])
-
-# ╔═╡ 5822defd-6518-476a-9ca7-c4e0e60f0e2e
-plot(propheatmapIdeal("sgas", t)[:,t])
-
-
-# ╔═╡ 739f8afd-9c6a-4722-8328-dd9ab76b60f7
-t
-
-# ╔═╡ a8e83c5c-a118-4b20-9cff-72a0a2ad6a63
-plot(propheatmapSW("sgas", t)[:,t])
-
-# ╔═╡ 8858d0a6-23be-4101-88b9-9a95c79d5f19
-propheatmapSW("pwater", 24)[1,24]
-
-# ╔═╡ b0e56722-fc52-493b-85c2-c1441c5e04c6
-plot(propheatmapIdeal("pwater", 100)[:,100])
-
-# ╔═╡ 788ab40d-d125-4271-a134-b71735bbe24f
-propheatmapIdeal("pwater", 133)[1,133]
-
-# ╔═╡ 8a48303f-49f9-4870-8b7d-617cbbc42542
-propheatmapSW("pwater", 133)[1,133]
-
-# ╔═╡ 5942f5fd-6a8d-49f6-8d54-0e3e417e5d6e
-propheatmapIdeal("sgas", 186)
-
-
-# ╔═╡ d7d5d9ee-c22b-4d49-a976-b29fc82aa9f2
-begin
-	stressrr = (propheatmapIdeal("stress_rr", 100))
-	stressrrSW = (propheatmapSW("stress_rr", 100))
-	dstressrr = (stressrrSW - stressrr)/maximum(abs.(stressrr))
-	
-end
-
-# ╔═╡ 03272d35-6197-4186-8bff-454eaefee3ce
-stresstt = (propheatmap("stress_tt", 100))
-
-# ╔═╡ 489591e2-2537-4393-a95f-d2be9e514bea
-sgas
-
-# ╔═╡ 3775567e-25c3-4156-bddf-fb62c6a3235c
-begin
-	psw = (propheatmapSW("pwater",  185))[3:end,3:end]
-	Tsw = (propheatmapSW("temp",  185))[3:end,3:end]
-	sgassw = (propheatmapSW("sgas",  185))[3:end,3:end]
-	disprsw = (propheatmapSW("disp_r",  185))[3:end,3:end]
-
-end
-
-# ╔═╡ 41989ce1-e898-4ebd-8929-60123d40b396
-psw
-
-# ╔═╡ 3d052d9f-dbbb-40f3-9f84-b2b9ebd852dc
-begin 
-	dp = (psw - p)/maximum(p)
-	dT = (Tsw - T)/maximum(T)
-	dsgas = (sgassw - sgas)/maximum(sgas)
-	ddisp = (disprsw - dispr)/maximum(abs.(dispr))
-end
-
-# ╔═╡ 743d62fb-ed2f-426b-9541-e375e6005ac5
-
-
-# ╔═╡ 68716b90-2fdf-4b25-b444-97ebd814890e
-maximum(abs.(dispr))
-
-# ╔═╡ 2605eb75-f8ce-430c-b1ef-0d37fcfbd324
-minimum(dispr)
-
-# ╔═╡ 394b8cb6-e2d9-4119-b845-6c619b475a9c
-maximum(dispr)
-
-# ╔═╡ c01d0542-085a-445f-b596-6a8ad3f46763
-maximum(sgas)
-
-# ╔═╡ ed1841c4-7986-41ca-a2d3-e6397bc3ae33
-heatmap(radii, times[2:101], stressrr', color=palette(:hot, 10), xscale=:log10, yscale=:log10, right_margin = 10mm)
-
-# ╔═╡ c7235506-827f-4576-bc9e-a1e48680a905
-heatmap(radii, times[2:101], stressrrSW', color=palette(:hot, 10), xscale=:log10, yscale=:log10, right_margin = 10mm, xlabel="r", ylabel="t")
-
-# ╔═╡ fd87a147-1063-4a16-afbb-958de145b237
-heatmap(radii, times[2:101], dstressrr', color=palette(:hot, 10), xscale=:log10, yscale=:log10, right_margin = 10mm)
-
-# ╔═╡ e4d395c2-9711-47b1-913b-e0087398397d
-heatmap(radii, times[1:100], ddisp', color=palette(:hot, 10), xscale=:log10, right_margin = 10mm)
-
-# ╔═╡ 4ce780fe-f40e-409a-8025-58ae29bf865f
-
-
-# ╔═╡ 1c1bdd7f-75db-469b-b34f-c893b25ae19f
-heatmap(radii, times[3:100], p', xscale=:log10)
-
-# ╔═╡ afa51623-6be4-46c1-90a5-5ff412101fde
-radii
-
-# ╔═╡ 4f012bd0-03ba-4e64-9fd8-a04d03a2e14c
-radii
-
-# ╔═╡ 261b38b0-b988-409f-af07-300e3a22f7b8
-Simples = [heatmap(radii, times[3:100], p, color=palette(:hot, 11)), heatmap(T, color=palette(:hot, 11)),
-heatmap(sgas, color=palette(:hot, 11)), heatmap(dispr, color=palette(:hot, 11))]
-
-# ╔═╡ 57e93baf-5021-43fc-af51-13c8f3f308e6
-SWs = [heatmap(psw, color=palette(:hot, 11)), heatmap(Tsw, color=palette(:hot, 11)),
-heatmap(sgassw, color=palette(:hot, 11)), heatmap(disprsw, color=palette(:hot, 11))]
-
-# ╔═╡ df344a5d-6c78-417c-873d-288f71d98ae7
-plot(Simples..., SWs..., layout = (2,4), yscale=:log10, link=:all)
-
-
-# ╔═╡ b1d8714d-01e0-4f9d-8527-f6d45a6b04a9
-plot(heatmap(p, color=palette(:hot, 11)), heatmap(T, color=palette(:hot, 11)),
-heatmap(sgas, color=palette(:hot, 11)), heatmap(dispr, color=palette(:hot, 11)), 
-	heatmap(psw, color=palette(:hot, 11)), heatmap(Tsw, color=palette(:hot, 11)),
-heatmap(sgassw, color=palette(:hot, 11)), heatmap(disprsw, color=palette(:hot, 11)),
-	yscale=:log10)
-
-# ╔═╡ 40602dc6-3796-4c2b-9aae-03de90329056
-heatmap(p, color=palette(:hot, 11))
-
-# ╔═╡ b07a575b-9068-4d80-a565-65b0d1dae38d
-p
-
-# ╔═╡ b9bc3487-8d0d-470a-a84d-a702bedac070
-heatmap(p-psw, yscale=:log10)
-
-# ╔═╡ 6ffd1f1c-09fe-49ae-aa9d-28de9aaa04d9
-scatter(p[50,:])
-
-# ╔═╡ 72281537-3f2e-4006-b09b-bc443f705ffd
-p
-
-# ╔═╡ a1be030c-b7e1-4443-98e9-8948516eb752
-heatmap(T, yscale=:log10)
-
-# ╔═╡ 15c10b57-5bd6-4e99-8e8f-27ad5959f23d
-heatmap(Tsw, yscale=:log10)
-
-# ╔═╡ 7f1efe11-d2c6-4f2b-8075-226724471e2c
-heatmap(T-Tsw, yscale=:log10)
-
-# ╔═╡ 4e547ba5-1901-428d-a52e-6ae56dc99c42
-heatmap(sgas, yscale=:log10)
-
-# ╔═╡ c7e1ed9d-4ee6-4a53-a854-3e0019183c50
-heatmap(sgas-sgassw, yscale=:log10)
-
-# ╔═╡ 7c415303-f477-47be-8025-02514ac280cb
-heatmap(dispr, yscale=:log10)
-
-# ╔═╡ 2cd869e4-d9c9-47f0-832c-8aad2637af2a
-heatmap(dispr-disprsw, yscale=:log10)
-
-# ╔═╡ e3c37df0-638a-4ea1-aa97-7b735326d6dd
-heatmap(p./T, yscale=:log10)
-
-# ╔═╡ ada25b50-295b-416c-9fc8-9faf73b11a35
-heatmap(propheatmapSW("pgas", 100), yscale=:log10, color=palette(:hot, 11))
-
-# ╔═╡ 923200b6-6d06-43a8-ba06-d75bb04ba193
-propheatmapSW("pgas", 100)
-
-# ╔═╡ 499a0458-a592-474a-a593-ecdcdb641919
-propheatmapSW("pwater", 100)
+# ╔═╡ 35824e78-b394-46dc-8d19-f069a46dafa0
+swpco2(1,2,SWcoef)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
-CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
-DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
 [compat]
-CSV = "~0.10.15"
-DataFrames = "~1.7.0"
 Plots = "~1.40.9"
-PlutoUI = "~0.7.60"
+PlutoUI = "~0.7.23"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -667,7 +481,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.3"
 manifest_format = "2.0"
-project_hash = "ad35bf347e35a8d274ed4ce7cc4a1f1d8613b99d"
+project_hash = "c4674787220796cc368bed7fa2663ff63075b7b7"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -696,12 +510,6 @@ git-tree-sha1 = "8873e196c2eb87962a2048b3b8e08946535864a1"
 uuid = "6e34b625-4abd-537c-b88f-471c36dfa7a0"
 version = "1.0.8+2"
 
-[[deps.CSV]]
-deps = ["CodecZlib", "Dates", "FilePathsBase", "InlineStrings", "Mmap", "Parsers", "PooledArrays", "PrecompileTools", "SentinelArrays", "Tables", "Unicode", "WeakRefStrings", "WorkerUtilities"]
-git-tree-sha1 = "deddd8725e5e1cc49ee205a1964256043720a6c3"
-uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
-version = "0.10.15"
-
 [[deps.Cairo_jll]]
 deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "JLLWrappers", "LZO_jll", "Libdl", "Pixman_jll", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
 git-tree-sha1 = "009060c9a6168704143100f36ab08f06c2af4642"
@@ -722,15 +530,21 @@ version = "3.27.1"
 
 [[deps.ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
-git-tree-sha1 = "b10d0b65641d57b8b4d5e234446582de5047050d"
+git-tree-sha1 = "c7acce7a7e1078a20a285211dd73cd3941a871d6"
 uuid = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
-version = "0.11.5"
+version = "0.12.0"
+
+    [deps.ColorTypes.extensions]
+    StyledStringsExt = "StyledStrings"
+
+    [deps.ColorTypes.weakdeps]
+    StyledStrings = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
 
 [[deps.ColorVectorSpace]]
 deps = ["ColorTypes", "FixedPointNumbers", "LinearAlgebra", "Requires", "Statistics", "TensorCore"]
-git-tree-sha1 = "a1f44953f2382ebb937d60dafbe2deea4bd23249"
+git-tree-sha1 = "8b3b6f87ce8f65a2b4f857528fd8d70086cd72b1"
 uuid = "c3611d14-8923-5661-9e6a-0046d554d3a4"
-version = "0.10.0"
+version = "0.11.0"
 
     [deps.ColorVectorSpace.extensions]
     SpecialFunctionsExt = "SpecialFunctions"
@@ -770,32 +584,16 @@ git-tree-sha1 = "439e35b0b36e2e5881738abc8857bd92ad6ff9a8"
 uuid = "d38c429a-6771-53c6-b99e-75d170b6e991"
 version = "0.6.3"
 
-[[deps.Crayons]]
-git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
-uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
-version = "4.1.1"
-
 [[deps.DataAPI]]
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 version = "1.16.0"
-
-[[deps.DataFrames]]
-deps = ["Compat", "DataAPI", "DataStructures", "Future", "InlineStrings", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrecompileTools", "PrettyTables", "Printf", "Random", "Reexport", "SentinelArrays", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
-git-tree-sha1 = "fb61b4812c49343d7ef0b533ba982c46021938a6"
-uuid = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-version = "1.7.0"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
 git-tree-sha1 = "1d0a14036acb104d9e89698bd408f63ab58cdc82"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 version = "0.18.20"
-
-[[deps.DataValueInterfaces]]
-git-tree-sha1 = "bfc1187b79289637fa0ef6d4436ebdfe6905cbd6"
-uuid = "e2d170a0-9d28-54be-80f0-106bbe20a464"
-version = "1.0.0"
 
 [[deps.Dates]]
 deps = ["Printf"]
@@ -854,17 +652,6 @@ git-tree-sha1 = "466d45dc38e15794ec7d5d63ec03d776a9aff36e"
 uuid = "b22a6f82-2f65-5046-a5b2-351ab43fb4e5"
 version = "4.4.4+1"
 
-[[deps.FilePathsBase]]
-deps = ["Compat", "Dates"]
-git-tree-sha1 = "7878ff7172a8e6beedd1dea14bd27c3c6340d361"
-uuid = "48062228-2e41-5def-b9a4-89aafe57970f"
-version = "0.9.22"
-weakdeps = ["Mmap", "Test"]
-
-    [deps.FilePathsBase.extensions]
-    FilePathsBaseMmapExt = "Mmap"
-    FilePathsBaseTestExt = "Test"
-
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 
@@ -896,10 +683,6 @@ deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "1ed150b39aebcc805c26b93a8d0122c940f64ce2"
 uuid = "559328eb-81f9-559d-9380-de523a88c83c"
 version = "1.0.14+0"
-
-[[deps.Future]]
-deps = ["Random"]
-uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 
 [[deps.GLFW_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libglvnd_jll", "Xorg_libXcursor_jll", "Xorg_libXi_jll", "Xorg_libXinerama_jll", "Xorg_libXrandr_jll", "libdecor_jll", "xkbcommon_jll"]
@@ -956,9 +739,9 @@ version = "8.3.1+0"
 
 [[deps.Hyperscript]]
 deps = ["Test"]
-git-tree-sha1 = "179267cfa5e712760cd43dcae385d7ea90cc25a4"
+git-tree-sha1 = "8d511d5b81240fc8e6802386302675bdf47737b9"
 uuid = "47d2ed2b-36de-50cf-bf87-49c2cf4b8b91"
-version = "0.0.5"
+version = "0.0.4"
 
 [[deps.HypertextLiteral]]
 deps = ["Tricks"]
@@ -972,37 +755,14 @@ git-tree-sha1 = "b6d6bfdd7ce25b0f9b2f6b3dd56b2673a66c8770"
 uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
 version = "0.2.5"
 
-[[deps.InlineStrings]]
-git-tree-sha1 = "45521d31238e87ee9f9732561bfee12d4eebd52d"
-uuid = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
-version = "1.4.2"
-
-    [deps.InlineStrings.extensions]
-    ArrowTypesExt = "ArrowTypes"
-    ParsersExt = "Parsers"
-
-    [deps.InlineStrings.weakdeps]
-    ArrowTypes = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
-    Parsers = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-
 [[deps.InteractiveUtils]]
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
-
-[[deps.InvertedIndices]]
-git-tree-sha1 = "0dc7b50b8d436461be01300fd8cd45aa0274b038"
-uuid = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
-version = "1.3.0"
 
 [[deps.IrrationalConstants]]
 git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
 uuid = "92d709cd-6900-40b7-9082-c6be49f344b6"
 version = "0.2.2"
-
-[[deps.IteratorInterfaceExtensions]]
-git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
-uuid = "82899510-4779-5014-852e-03e436cf321d"
-version = "1.0.0"
 
 [[deps.JLFzf]]
 deps = ["Pipe", "REPL", "Random", "fzf_jll"]
@@ -1177,11 +937,6 @@ git-tree-sha1 = "f02b56007b064fbfddb4c9cd60161b6dd0f40df3"
 uuid = "e6f89c97-d47a-5376-807f-9c37f3926c36"
 version = "1.1.0"
 
-[[deps.MIMEs]]
-git-tree-sha1 = "65f28ad4b594aebe22157d6fac869786a255b7eb"
-uuid = "6c6e2e6c-3030-632d-7369-2d6c69616d65"
-version = "0.1.4"
-
 [[deps.MacroTools]]
 deps = ["Markdown", "Random"]
 git-tree-sha1 = "2fa9ee3e63fd3a4f7a9a4f4744a52f4856de82df"
@@ -1336,16 +1091,10 @@ version = "1.40.9"
     Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [[deps.PlutoUI]]
-deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
-git-tree-sha1 = "eba4810d5e6a01f612b948c9fa94f905b49087b0"
+deps = ["AbstractPlutoDingetjes", "Base64", "Dates", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "UUIDs"]
+git-tree-sha1 = "5152abbdab6488d5eec6a01029ca6697dff4ec8f"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-version = "0.7.60"
-
-[[deps.PooledArrays]]
-deps = ["DataAPI", "Future"]
-git-tree-sha1 = "36d8b4b899628fb92c2749eb488d884a926614d3"
-uuid = "2dfb63ee-cc39-5dd5-95bd-886bf059d720"
-version = "1.4.3"
+version = "0.7.23"
 
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
@@ -1358,12 +1107,6 @@ deps = ["TOML"]
 git-tree-sha1 = "9306f6085165d270f7e3db02af26a400d580f5c6"
 uuid = "21216c6a-2e73-6563-6e65-726566657250"
 version = "1.4.3"
-
-[[deps.PrettyTables]]
-deps = ["Crayons", "LaTeXStrings", "Markdown", "PrecompileTools", "Printf", "Reexport", "StringManipulation", "Tables"]
-git-tree-sha1 = "1101cd475833706e4d0e7b122218257178f48f34"
-uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
-version = "2.4.0"
 
 [[deps.Printf]]
 deps = ["Unicode"]
@@ -1440,12 +1183,6 @@ git-tree-sha1 = "3bac05bc7e74a75fd9cba4295cde4045d9fe2386"
 uuid = "6c6a2e73-6563-6170-7368-637461726353"
 version = "1.2.1"
 
-[[deps.SentinelArrays]]
-deps = ["Dates", "Random"]
-git-tree-sha1 = "d0553ce4031a081cc42387a9b9c8441b7d99f32d"
-uuid = "91c51154-3ec4-41a3-a24f-3f23e20d615c"
-version = "1.4.7"
-
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 
@@ -1497,12 +1234,6 @@ git-tree-sha1 = "5cf7606d6cef84b543b483848d4ae08ad9832b21"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 version = "0.34.3"
 
-[[deps.StringManipulation]]
-deps = ["PrecompileTools"]
-git-tree-sha1 = "a6b1675a536c5ad1a60e5a5153e1fee12eb146e3"
-uuid = "892a3eda-7b42-436c-8928-eab12a02cf0e"
-version = "0.4.0"
-
 [[deps.SuiteSparse_jll]]
 deps = ["Artifacts", "Libdl", "libblastrampoline_jll"]
 uuid = "bea87d4a-7f5b-5778-9afe-8cc45184846c"
@@ -1512,18 +1243,6 @@ version = "7.2.1+1"
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 version = "1.0.3"
-
-[[deps.TableTraits]]
-deps = ["IteratorInterfaceExtensions"]
-git-tree-sha1 = "c06b2f539df1c6efa794486abfb6ed2022561a39"
-uuid = "3783bdb8-4a98-5b6b-af9a-565f29a5fe9c"
-version = "1.0.1"
-
-[[deps.Tables]]
-deps = ["DataAPI", "DataValueInterfaces", "IteratorInterfaceExtensions", "OrderedCollections", "TableTraits"]
-git-tree-sha1 = "598cd7c1f68d1e205689b1c2fe65a9f85846f297"
-uuid = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
-version = "1.12.0"
 
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
@@ -1610,17 +1329,6 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "93f43ab61b16ddfb2fd3bb13b3ce241cafb0e6c9"
 uuid = "2381bf8a-dfd0-557d-9999-79630e7b1b91"
 version = "1.31.0+0"
-
-[[deps.WeakRefStrings]]
-deps = ["DataAPI", "InlineStrings", "Parsers"]
-git-tree-sha1 = "b1be2855ed9ed8eac54e5caff2afcdb442d52c23"
-uuid = "ea10d353-3f73-51f8-a26c-33c1cb351aa5"
-version = "1.4.2"
-
-[[deps.WorkerUtilities]]
-git-tree-sha1 = "cd1659ba0d57b71a464a29e64dbc67cfe83d54e7"
-uuid = "76eceee3-57b5-4d4a-8e66-0e911cebbf60"
-version = "1.6.1"
 
 [[deps.XML2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Zlib_jll"]
@@ -1902,164 +1610,41 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╠═35df67ca-7b6a-11ef-1fee-25fe0c894509
-# ╠═cec903b7-37b2-44f8-b106-521badf175af
-# ╠═93a12eec-cc10-4fee-ab4c-5676346cd649
-# ╠═fb5f533c-f276-484e-80ff-7dee22dffbd0
-# ╠═6fbc76e9-1114-4a50-9312-b61d53be5bd5
-# ╠═40a6041a-87fd-453a-b6aa-29a457738c82
-# ╠═c76be259-f430-4116-8b3a-1ac362f40e19
-# ╠═280343bb-e975-4265-93af-cdabe79a93d2
-# ╠═417a3445-c4a1-41f2-91e9-8e5c25bc2a78
-# ╠═f0215f50-03e8-4df5-b655-03d9fd98a645
-# ╠═73f9c2e3-5ddf-4866-ac1d-7db45916b1c6
-# ╠═8c1f1e43-03c0-4028-afae-37b4f18eb900
-# ╠═cca25fe5-2231-44c5-96aa-23eaa9ceb5ed
-# ╠═29ac0639-a5be-411b-9a09-5a864e828ca1
-# ╠═768956a1-d8c2-4c7c-b58f-8f448a0b542b
-# ╠═46ace5d0-157b-4ed5-ab3e-9c751b28e643
-# ╠═c9db5bfa-53ee-4a1e-932a-02e51804e61c
-# ╠═4b4536c9-e11f-4d3f-8645-6c58e5abf2fe
-# ╠═0d8c1538-9b96-4616-8b06-ad12e0920dc2
-# ╠═1342c432-fac3-4759-8404-49cd6a9b4e69
-# ╠═20a11185-0f55-4e10-af93-22c38966c402
-# ╠═72f49c93-3a6f-42ed-8fb3-c185a6b21552
-# ╠═7a47f32c-1d2b-404c-a503-885ca5bea2f1
-# ╠═e00af36d-7651-4810-8b63-5769f03d6778
-# ╠═a7645113-3eef-40f0-9da0-6d3c73de7de4
-# ╠═e16e528e-ab42-47dc-a2e5-f48ff10cdac7
-# ╠═86d9e6f1-80a8-489a-95e1-3ab76b3ff303
-# ╠═4f3c5226-7f0d-42fe-8849-dfc3d4b7e233
-# ╠═bbda38bf-ee43-4ae8-9005-00b3e8ca19b4
-# ╠═151bd023-f757-4eb7-856a-25999ebf5f41
-# ╠═31dd8db4-73c6-4bde-a4b2-79fecd4fdada
-# ╠═2982a6b6-3044-436c-9fd4-b43a8596cf6a
-# ╠═d202192e-0e01-4fe5-b84d-673cfb77f1b9
-# ╠═78c561cf-984d-43fd-9edc-51e5c0c037d3
-# ╠═fced5727-e0a3-467c-a0c8-1df944ff31ca
-# ╠═538cb857-0905-48fb-a5a5-b40134c0f9fe
-# ╠═20057c28-2a7d-4c6c-8f7d-46afd49825c7
-# ╠═b09a6319-6f24-406b-8611-c34c17310b54
-# ╠═904628ac-935e-429d-a91c-d0632f7268b9
-# ╠═f05f1416-80aa-4ee9-8daa-b3a9c97499de
-# ╠═b323aa45-ef1e-4847-963e-2672a252e5b3
-# ╠═898dbeb6-6a3d-4e88-bd2e-eb09b147f66b
-# ╠═e894d08e-f5aa-4e7a-8493-2c51b4c13d07
-# ╠═a3fc8fdb-143d-44cb-956e-147043b5a895
-# ╠═3f9d8246-8c4b-4993-8189-ddab9bfafcce
-# ╠═7fd01ecb-de31-4f75-93d8-8bae65c04db1
-# ╠═8b9f56c7-2663-4ca5-8244-a97e59325bc2
-# ╠═822b8c35-82d3-420b-9f12-0a64686a8b09
-# ╠═fb33055d-bdd6-42a5-93f9-e5ad1ae70181
-# ╠═96cc533f-941b-4748-8cc0-8933341fd50b
-# ╠═33e31d67-3daf-4b8a-a14c-8bbe36be713e
-# ╠═987de347-3b29-4bd1-ac65-3609348e3680
-# ╠═41a71969-14f0-45f7-b989-e1e36bc6c484
-# ╠═4a584c43-790d-48c3-b93d-36db6ec50d49
-# ╠═e0e668e6-2ef0-4a1b-9be2-c455603bda6e
-# ╠═5f6cd114-16a4-467e-87b0-a167391109bb
-# ╠═efb75b38-09bb-4c65-a805-e7b447c2f4c4
-# ╠═fb4efca2-c32c-4eac-b294-88808a86289d
-# ╠═3eb06f83-7e97-4a28-923c-8f91b4aec49f
-# ╠═7a0f593c-64fe-4f9e-ba0b-dd57895fdaec
-# ╠═da633dc5-1b3c-431d-8f2a-d6968b60e600
-# ╠═abc74216-7d1b-45e6-9a8e-5a879d61a380
-# ╠═32ad35d3-f1cc-4973-b1c1-d017753c6a6f
-# ╠═fbd8d6db-11da-4f93-9f33-f8d2136ced5a
-# ╠═f600417a-1177-4003-8d87-b2c1765565b7
-# ╠═2d56c58c-e791-4da8-aea9-864a1ec2731c
-# ╠═9a77fd1a-7efb-48f7-86fb-c4b25f8fdb7d
-# ╠═f034b9e4-380b-4f8a-bcad-f81a5d990fcc
-# ╠═2d3a6592-4585-4591-a940-91ee2118fa6e
-# ╠═c6681149-6809-4548-8497-c84682a7e644
-# ╠═f3a43598-be74-403f-8e60-99c14f9c5ef8
-# ╠═89363ecd-598f-4b71-82a7-cbcb00096a72
-# ╠═868e44d3-bc76-4903-b34b-a8bea7110071
-# ╠═7c2d62bc-e801-4cfd-85c6-691e1602f48e
-# ╠═70a583b5-fcde-4914-8c9a-82dd0a0cb6bb
-# ╠═f25c97e5-2464-494f-b513-d3a976d2fe3c
-# ╠═7abe6e2f-8502-4fe5-bd91-95846eeeb855
-# ╠═817fc84d-01fc-42c4-bcc4-e7468838ac74
-# ╠═f684c9f3-0d27-4e4e-a89e-cd61e2becc82
-# ╠═b262f86d-9718-4ccc-8bc9-ed06176c3e59
-# ╠═d05e7286-6809-4060-87e6-5323def352dc
-# ╠═2f2cdcb4-4d4e-4ba0-b71e-f3d0a153055d
-# ╠═eb5d773a-751e-430e-8e7c-405ca8c24162
-# ╠═d13c3138-47e9-4c37-b48d-9e7f2de99e83
-# ╠═11b115f8-6584-4056-add0-dfb513a61c17
-# ╠═f9da8a17-eb9d-4822-97eb-d6c194e9c921
-# ╠═10eaa511-2ea8-4a4a-acf9-aff9712c45a5
-# ╠═734110cf-bc29-4f59-a7d6-b024b604bd94
-# ╠═95c24e48-ea71-4f4f-b971-d0a9a553349f
-# ╠═d53d1054-5561-4793-ab3c-f1e178c74d12
-# ╠═cf3bf479-be14-411f-ab22-dfeba28d65b4
-# ╠═da700dd4-33c0-47e8-ab27-60cde5c8f90d
-# ╠═5e6433c0-0414-41e9-81b9-d07bf39435b3
-# ╠═1594d17b-eda0-489f-a771-0dec266ae0a7
-# ╠═4c25aa45-d0bb-45f8-ad4d-91c291e633d4
-# ╠═deb1c4d6-a944-465d-9a61-eff1d22b6cf4
-# ╠═7d05436f-7026-4978-8716-8dfa41f22e98
-# ╠═c2ea840f-9f05-460b-8238-06db3a3f5659
-# ╠═26df3569-0022-46ad-a807-db986025e02b
-# ╠═ab12f5d1-f70b-41db-b286-e7dd2c262a50
-# ╠═4dfccd25-f62c-47c3-a631-c053bd9790da
-# ╠═27745b4d-154a-4157-8567-bc513b4b4e5d
-# ╠═072a2fed-9569-4550-a0dc-4ddb6897793f
-# ╠═15916bea-3b14-42dd-8acf-d967af5aafe8
-# ╠═c9a7bab9-a7f9-48f5-9e35-15787a48c9b7
-# ╠═2b729232-9f94-4538-be67-14c2c3a67885
-# ╠═3c081ea7-7e83-40de-9a4e-ea6b61899bc7
-# ╠═e24467c5-3932-4462-854c-c5c6c97769b1
-# ╠═60ff78cb-8b30-416f-a44a-5ff4456ad8b0
-# ╠═45630dd1-068b-410c-a769-d100daf303bd
-# ╠═0f263cbc-109f-4503-b60c-3af6123f7f5f
-# ╠═5822defd-6518-476a-9ca7-c4e0e60f0e2e
-# ╠═61fff211-11b3-4912-8f71-6e59ae32cec7
-# ╠═739f8afd-9c6a-4722-8328-dd9ab76b60f7
-# ╠═a8e83c5c-a118-4b20-9cff-72a0a2ad6a63
-# ╠═8858d0a6-23be-4101-88b9-9a95c79d5f19
-# ╠═b0e56722-fc52-493b-85c2-c1441c5e04c6
-# ╠═788ab40d-d125-4271-a134-b71735bbe24f
-# ╠═8a48303f-49f9-4870-8b7d-617cbbc42542
-# ╠═5942f5fd-6a8d-49f6-8d54-0e3e417e5d6e
-# ╠═d7d5d9ee-c22b-4d49-a976-b29fc82aa9f2
-# ╠═03272d35-6197-4186-8bff-454eaefee3ce
-# ╠═489591e2-2537-4393-a95f-d2be9e514bea
-# ╠═3775567e-25c3-4156-bddf-fb62c6a3235c
-# ╠═41989ce1-e898-4ebd-8929-60123d40b396
-# ╠═3d052d9f-dbbb-40f3-9f84-b2b9ebd852dc
-# ╠═743d62fb-ed2f-426b-9541-e375e6005ac5
-# ╠═68716b90-2fdf-4b25-b444-97ebd814890e
-# ╠═2605eb75-f8ce-430c-b1ef-0d37fcfbd324
-# ╠═394b8cb6-e2d9-4119-b845-6c619b475a9c
-# ╠═c01d0542-085a-445f-b596-6a8ad3f46763
-# ╠═ed1841c4-7986-41ca-a2d3-e6397bc3ae33
-# ╠═c7235506-827f-4576-bc9e-a1e48680a905
-# ╠═fd87a147-1063-4a16-afbb-958de145b237
-# ╠═e4d395c2-9711-47b1-913b-e0087398397d
-# ╠═4ce780fe-f40e-409a-8025-58ae29bf865f
-# ╠═1c1bdd7f-75db-469b-b34f-c893b25ae19f
-# ╠═afa51623-6be4-46c1-90a5-5ff412101fde
-# ╠═4f012bd0-03ba-4e64-9fd8-a04d03a2e14c
-# ╠═261b38b0-b988-409f-af07-300e3a22f7b8
-# ╠═57e93baf-5021-43fc-af51-13c8f3f308e6
-# ╠═df344a5d-6c78-417c-873d-288f71d98ae7
-# ╠═b1d8714d-01e0-4f9d-8527-f6d45a6b04a9
-# ╠═40602dc6-3796-4c2b-9aae-03de90329056
-# ╠═b07a575b-9068-4d80-a565-65b0d1dae38d
-# ╠═b9bc3487-8d0d-470a-a84d-a702bedac070
-# ╠═6ffd1f1c-09fe-49ae-aa9d-28de9aaa04d9
-# ╠═72281537-3f2e-4006-b09b-bc443f705ffd
-# ╠═a1be030c-b7e1-4443-98e9-8948516eb752
-# ╠═15c10b57-5bd6-4e99-8e8f-27ad5959f23d
-# ╠═7f1efe11-d2c6-4f2b-8075-226724471e2c
-# ╠═4e547ba5-1901-428d-a52e-6ae56dc99c42
-# ╠═c7e1ed9d-4ee6-4a53-a854-3e0019183c50
-# ╠═7c415303-f477-47be-8025-02514ac280cb
-# ╠═2cd869e4-d9c9-47f0-832c-8aad2637af2a
-# ╠═e3c37df0-638a-4ea1-aa97-7b735326d6dd
-# ╠═ada25b50-295b-416c-9fc8-9faf73b11a35
-# ╠═923200b6-6d06-43a8-ba06-d75bb04ba193
-# ╠═499a0458-a592-474a-a593-ecdcdb641919
+# ╠═397ddfa1-c66e-424b-858c-944f5a516935
+# ╠═f6cd902c-7c0c-48d4-99c8-a3d23dae5585
+# ╠═7f91bcda-0f38-11f0-139f-7743c14aaa2d
+# ╠═29449322-3995-411f-b425-b44b0368ebd5
+# ╠═d6fec056-9017-4723-b4b0-f03f4b86351e
+# ╠═11739b2d-b57c-4b1e-b3a4-eefc17941efb
+# ╠═07bd7b98-a52c-45be-bde3-a15f07bbd9e9
+# ╠═62364d50-bf23-4043-aa76-36b657eb9df5
+# ╠═70b5d1b1-a218-4e06-a4a3-0a8403d89b8c
+# ╠═e6b42ce2-4e98-4839-bd4d-83cca6dd8121
+# ╠═171fb27f-10be-462a-8615-da3716aa6983
+# ╠═584cd8e2-a074-45c1-bc46-b5fbec4d44bd
+# ╠═1008c9f9-14b3-4cb7-a415-3e1bca786415
+# ╠═114c2660-1455-4e10-9d9b-9bb65cc92e33
+# ╠═0b2591e5-2ad1-4d66-86cc-aac133e87a70
+# ╠═71fe4003-892b-4e35-9011-b9e95404ba09
+# ╠═870f8ec9-ef61-4b49-b85d-d0b69c5b758f
+# ╠═cd6dbf33-cc65-4594-9e74-2675bc71f807
+# ╠═6b4a3b66-c841-4602-9209-48b35c1d69e3
+# ╠═2783db8e-38d2-4127-823c-13709606ffc8
+# ╠═e507b2f4-b468-454d-a966-4d1e2b11c2f5
+# ╠═af9f7987-71cb-4849-ab80-33f6d8ff55b3
+# ╠═1bdc81ea-5f64-4601-a8e6-59b637de9059
+# ╠═0ba1f15c-1eb3-4eed-87d2-31a7318b46c7
+# ╠═70502f8e-234e-442e-97ba-59d57895ab9d
+# ╠═9933f736-3d3c-4d41-b3d5-06c38377361c
+# ╠═1dee3fd0-6bf2-4347-b136-4378f0695971
+# ╠═223c6da1-6f94-43bc-aa48-0557cb339a27
+# ╠═f60d76eb-07d2-4f7a-92d8-419d4e1e5829
+# ╠═f160a1c9-8639-4cae-9ca5-a04d4eae5f31
+# ╠═187321d8-feb3-45be-a747-dbf3845bc1e9
+# ╠═d7783c5e-09c0-4da0-956d-5d56ee30c43d
+# ╠═3016d183-422f-4af4-ac09-3104f4f4857d
+# ╠═40a1de7b-a8e6-4c2c-82ba-4c6283594f97
+# ╠═d953058e-ce33-4694-80f9-3d96ce81c010
+# ╠═35824e78-b394-46dc-8d19-f069a46dafa0
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

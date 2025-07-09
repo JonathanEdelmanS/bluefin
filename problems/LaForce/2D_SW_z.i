@@ -12,27 +12,36 @@
 # nx=400, bias_x=1.02
 # nx=1000, bias_x=1.01
 # nx=2000, bias_x=1.003
-[Mesh]
-  [MeshGenerator]
-  type = GeneratedMeshGenerator
-  dim = 2
-  nx = 50
-  ny = 13
-  bias_x = 1.1
-  xmin = 0.1
-  xmax = 100
-  ymin = 0
-  ymax = 11
+[MeshGenerators]
+  [gen]
+    type = GeneratedMeshGenerator
+    dim = 2
+    nx = 100
+    ny = 13
+    bias_x = 1.1
+    xmin = 0.1
+    xmax = 100
+    ymin = 0
+    ymax = 11
   []
-  [inject_layer6]
-    type = SideSetsFromBoundingBoxGenerator
-    input=MeshGenerator
-    boundary_new=inject_layer6
-    included_boundaries=left
-    bottom_left = '0.09 5.0 0'
-    top_right = '0.2 5.9 0'
+
+  [rename_left_boundary]
+    type = SideSetsBetweenSubdomainsGenerator
+    input = gen
+    new_boundary = 'inject_layer6'
+    coord = 'y'
+    coord_min = 5.0   # Adjust this range to match the y-layer you want
+    coord_max = 5.9   # One layer width is ≈ 11/13 ≈ 0.846
+    normal = 'x'
   []
+
 []
+
+[Mesh]
+  type = MeshGeneratorMesh
+  generator = rename_left_boundary
+[]
+
 
 [Problem]
   coord_type = RZ
@@ -226,7 +235,7 @@ initialp = 6.2e6
     thermal_expansion = 0
   []
   [co2]
-    type = IdealGasFluidProperties
+    type = CO2FluidProperties
   []
   [tabulated]
     type = TabulatedBicubicFluidProperties
@@ -280,7 +289,7 @@ initialp = 6.2e6
   []
   [permeability_reservoir]
     type = PorousFlowPermeabilityConst
-    permeability = '2e-12 0 0  0 2e-12 0  0 0 0'
+    permeability = '2e-12 0 0  0 0 0  0 0 0'
   []
   [relperm_liquid]
     type = PorousFlowRelativePermeabilityCorey
@@ -371,17 +380,17 @@ initialp = 6.2e6
     use_mobility = false
     use_relperm = false
     fluid_phase = 1
-    flux_function = 'min(1, t/100) * -1' # 5.0E5 T/year = 15.855 kg/s, over area of 2Pi*0.1*11
+    flux_function = 'min(1, t/100) * -.01' # 5.0E5 T/year = 15.855 kg/s, over area of 2Pi*0.1*11
   []
   [cold_co2]
     type = DirichletBC
-    boundary = inject_layer6
+    boundary = left
     variable = temp
     value = 301
   []
   [cavity_pressure_x]
     type = Pressure
-    boundary = inject_layer6
+    boundary = left
     variable = disp_r
     component = 0
     postprocessor = p_bh # note, this lags
