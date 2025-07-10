@@ -4,13 +4,19 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ dd191d6e-27b4-11f0-2350-33f8e64f08e2
-using PlutoUI, Plots, DataFrames, CSV,  Plots.PlotMeasures , DifferentialEquations
+# ╔═╡ 7be6a36c-5cd0-11f0-377c-0546efed357e
+using DifferentialEquations, Plots, PlutoUI, DataFrames, CSV,  Plots.PlotMeasures 
 
-# ╔═╡ 6e3cd9fa-42ba-4620-9f77-f068799196f4
-using BenchmarkTools
 
-# ╔═╡ ba838e3b-1fe6-493a-863f-39a28445644a
+# ╔═╡ 2421e224-f9f5-42a2-9491-3c651449b0c7
+begin
+	# Put paths for outputs of Reservoir_Span_Wagner.i and Reservoir_Ideal_Gas.i here
+	
+	SpanWagnerPath = "Reservoir_Span_Wagner_csv_Output/"
+	IdealGasPath = "Reservoir_Ideal_Gas_csv_Output/"
+end
+
+# ╔═╡ 3436a157-bd4e-473b-bbde-87715291c684
 module m
 	    # critical terms and values for CO2
 	    tc = 304.1282;              # critical temperature in K
@@ -39,7 +45,7 @@ module m
 	    th4 = 3.15163; th5 = 6.1119; th6 = 6.77708; th7 = 11.32384; th8 = 27.08792;
 	end
 
-# ╔═╡ 7e1f7738-c3aa-46d8-813a-9fc195d7e73d
+# ╔═╡ 3b6b46c5-7e77-43f7-88c8-c92d0e3e920c
 begin
 	#--------------------------------------------------------------------------
 	# All the subsequent functions are calculated based on equations from span
@@ -267,7 +273,7 @@ begin
 	
 end
 
-# ╔═╡ 8db7494c-7ca9-4c1d-84cb-42397063fed7
+# ╔═╡ 641a89ee-8d31-4050-9cf8-813f5b5f3202
 begin
 	function swpco2(ρ,T, SW_Coef = 1)
 		tau = m.tc/T;
@@ -286,45 +292,277 @@ begin
 	end
 end
 
-# ╔═╡ 714d1819-4a27-4c57-a250-f1c74f11e3ca
-begin
-	pbhSW=CSV.read("/problems/LaForce/2D_SWFluid_csv.csv", comment="#", DataFrame);
-	pbhIG=CSV.read("projects/bluefin/problems/LaForce/2D_IdealFluid_csv.csv", comment="#", DataFrame);
-	2
+# ╔═╡ 53ea2768-9099-4945-99b0-4a3de705e317
+let
+	plot()
+	pressures = .1:.1:30
+	Temps = 250:10:450
+	for T in Temps
+		ρ = [maximum(swdenco2(p * 1e6,T)) for p in pressures]
+		plot!(pressures,ρ, label="$T  K")
+	end
+	plot!(xlabel = "pressure in MPa", ylabel = "density in kg/m3", title = "Span-Wagner Isotherms")
 end
 
-# ╔═╡ 63766868-19d2-4027-8e8e-ce2efd4099f7
-pwd()
-
-# ╔═╡ da9b4fd3-e439-47f4-bce6-50a8404abea4
+# ╔═╡ ae8b7bf3-fad3-44bd-9ecd-c835cb7a07dd
 begin
+	#Pipe Simulations
 	g=9.81 #m/s^2
-	#p1 = 6.8e6 #6.8MPa bottom
+	p1 = 6.8e6 #6.8MPa bottom
 	T1 = 301 #K
-	Γ = -.016 #K/m
 	Z = 550 #m
-	T0 = T1 - Γ * Z
-	Arock = 11 * .1 * 2 * π
-	Apipe = .1^2 * π
-	#ρ1IG = p1 / (m.r * T1)
-	#ρ1SW = maximum(swdenco2(p1, T1))
+	ρ1IG = p1 / (m.r * T1)
+	ρ1SW = maximum(swdenco2(p1, T1))
 	f = .1         # friction factor [1/m]
 	d = .2
 	fric = f/d
-	uρ = 1.991 * Arock / Apipe
-	#u1SW = u1ρ1/ρ1SW
-	#u1IG = u1ρ1/ρ1IG
-	rampup = 100
+	u1ρ1 = 400
+	u1SW = u1ρ1/ρ1SW
+	u1IG = u1ρ1/ρ1IG
+	dTdZs = [-.016,0,.016]
+
+	plot()
+
+	solsIG = []
+	
+	for dTdZ in dTdZs
+	ρ1 = ρ1IG
+	u1 = u1IG
+			
+	function ∂p_∂ρ(T, ρ)
+		# specific gas constant for CO₂ [J/(kg·K)]
+		return m.r * T
+	    #return swdpdρ(ρ, T, 0)
+	end
+	function ∂p_∂T(T, ρ)
+		return m.r * ρ
+	    #return swdpdT(ρ, T, 0)
+	end
+	# Define the ODE system: du/dx = RHS
+	function du_dx!(du, u, p, x)
+		g=9.81
+	    ρ = ρ1 * u1 / u[1]
+	    T = T1 - dTdZ * x
+	    dpdrho = ∂p_∂ρ(T, ρ)
+	    dpdT = ∂p_∂T(T, ρ)
+	    factor = 1 - (dpdrho / u[1]^2)
+	    rhs = (-g / u[1]) +fric * u[1] - (1 / (ρ1 * u1)) * dpdT * (-dTdZ)
+	    du[1] = rhs / factor
+	end
+	# Initial conditions
+	#T₀ = 300.0              # Initial temperature [K]
+	xspan = (0.0, Z)     # Spatial domain
+	u_init = [u1]
+	
+	# Solve ODE
+	prob = ODEProblem(du_dx!, u_init, xspan)
+	sol = solve(prob, TRBDF2(), reltol=1e-8, abstol=1e-8)
+	push!(solsIG,sol)
+
+	end
+	
+	begin
+	solsSW = []
+		
+	for dTdZ in dTdZs
+	ρ1 = ρ1SW
+	u1 = u1SW
+				
+		function ∂p_∂ρ(T, ρ)
+			# specific gas constant for CO₂ [J/(kg·K)]
+			#return m.r * T
+		    return swdpdρ(ρ, T, 1)
+		end
+		function ∂p_∂T(T, ρ)
+			#return m.r * ρ
+		    return swdpdT(ρ, T, 1)
+		end
+		# Define the ODE system: du/dx = RHS
+		function du_dx!(du, u, p, x)
+			g=9.81
+		    ρ = ρ1 * u1 / u[1]
+		    T = T1 - dTdZ * x
+		    dpdrho = ∂p_∂ρ(T, ρ)
+		    dpdT = ∂p_∂T(T, ρ)
+		    factor = 1 - (dpdrho / u[1]^2)
+		    rhs = (-g / u[1]) +fric * u[1] - (1 / (ρ1 * u1)) * dpdT * (-dTdZ)
+		    du[1] = rhs / factor
+		end
+		# Initial conditions
+		#T₀ = 300.0              # Initial temperature [K]
+		xspan = (0.0, Z)     # Spatial domain
+		u_init = [u1]
+		
+		# Solve ODE
+		prob = ODEProblem(du_dx!, u_init, xspan)
+		sol = solve(prob, TRBDF2(), reltol=1e-8, abstol=1e-8)
+		# Plot
+		#plot(sol, xlabel="z", ylabel="u(z)", title="Velocity Profile")
+		#print(sol(500))
+		#plot!(sol.t, [u1/el[1] for el in sol.u], xlabel="z", ylabel="u1/u(z)", label="dT/dz="*string(dTdz))
+		push!(solsSW,sol)
+	
+		end
+	end
+
+	ρsolsSW = [(solSW.t,  [ρ1SW .*  u1SW  ./ sol[1] for sol in solSW.u]) for solSW in solsSW]
+	ρsolsIG = [(solIG.t,  [ρ1IG .* u1IG ./ sol[1] for sol in solIG.u]) for solIG in solsIG]
+
+	psolsSW = []
+	for i in 1:length(dTdZs)
+		ρsolSW = ρsolsSW[i]
+		zs = ρsolSW[1]
+		ps = [swpco2(ρsolSW[2][j] , T1 - dTdZs[i] * zs[j]) for j in 1:length(zs)]
+		push!(psolsSW,(zs,ps))
+	end
+
+	psolsIG = []
+	for i in 1:length(dTdZs)
+		ρsolIG = ρsolsIG[i]
+		zs = ρsolIG[1]
+		ps = ρsolIG[2] .* m.r .* (T1 .-zs .* dTdZs[i])
+		push!(psolsIG,(zs,ps))
+	end
+	
+	
 end
 
-# ╔═╡ a0218a0d-bba3-4129-ae4d-669f10c782b8
-1.991 * Arock
+# ╔═╡ f1b18030-29c5-4dc4-841c-48b23685f69d
+let
+	plot()
+	pressures = 5.6e6:1e4:6.9e6
+	Temps = 293:2:313
+	
+	for T in Temps
+		ρ = [maximum(swdenco2(p,T)) for p in pressures]
+		plot!(pressures ./1e6,ρ,  label="$T  K", color = get(cgrad([:blue, :magenta, :red]),(T-293)/20))
+	end
+	plot!(xlabel = "p (MPa)", ylabel = "ρ (kg/m3)", xlims = (5.6, 6.9))
 
-# ╔═╡ b9e3cd2c-0650-40ed-a554-6fc2516e02f5
-uρ * Apipe
 
-# ╔═╡ bcb43f1e-99bc-46e6-96f4-6cfbcb9ce651
-function u0pipesolIG(ρ1,u1)
+	
+	for i in 1:length(dTdZs)
+		scatter!(psolsSW[i][2] ./1e6,ρsolsSW[i][2], title="Span-Wagner EOS pipe flows in p, ρ space", label = "dT/dz = " * string(round(dTdZs[i] * 1000, digits=1)) *" K/km")
+	end
+	plot!(yrange = (90, 300), legend = :bottomright)
+end
+
+# ╔═╡ 163a3038-ac4c-45d7-878b-58c43f778a92
+let
+	plot()
+	pressures = 5.6e6:1e4:6.9e6
+	Temps = 293:2:313
+	for T in Temps
+		ρ = pressures./(T*m.r)
+		plot!(pressures ./1e6,ρ, label="$T  K", color = get(cgrad([:blue, :magenta, :red]),(T-293)/20))
+	end
+	plot!(xlabel = "p (MPa)", ylabel = "ρ (kg/m3)")
+
+	for i in 1:length(dTdZs)
+		scatter!(psolsIG[i][2]./1e6,ρsolsIG[i][2], title="Ideal Gas EOS pipe flows in p, ρ space", label = "dT/dz = " * string(round(dTdZs[i] * 1000, digits=1)) *" K/km")
+	end
+	plot!(yrange = (100, 125), legend = :topleft)
+
+end
+
+# ╔═╡ 60d7a90d-834d-4ce2-b198-f0c8055c1496
+begin
+	linestyles = [:solid, :dashdotdot, :dash]
+	plot(title = "ρ(z) dependence on EOS and dT/dz")
+	for i in 1:length(dTdZs)
+		ρsolSW = ρsolsSW[i]
+		ρsolIG = ρsolsIG[i]
+		plot!(ρsolSW[2], Z .- ρsolSW[1], label="Span-Wagner EOS, dT/dz = "* string(round(dTdZs[i] * 1000, digits=1)) *" K/km", yflip=true, color="red", line = (2,linestyles[i]))
+		plot!(ρsolIG[2], Z .-ρsolIG[1], label= "Ideal Gas EOS, dT/dz = "* string(round(dTdZs[i] * 1000, digits=1)) *" K/km", color="blue", line = (2,linestyles[i]), legend=:topright)
+		ylabel!("z (m)")
+		xlabel!("ρ(z) (kg/m^3)")
+	end
+	plot!()
+end
+
+# ╔═╡ 0412f2e1-e7f4-4e7b-a1b4-a0b1dbe1aaf4
+begin
+	plot(title = "p(z) dependence on EOS and dT/dz")
+	for i in 1:length(dTdZs)
+		psolSW = psolsSW[i]
+		psolIG = psolsIG[i]
+		plot!(psolSW[2] ./1e6, Z .- psolSW[1], label="Span-Wagner EOS, dT/dz = "* string(round(dTdZs[i] * 1000, digits=1)) *" K/km", color="red", yflip=true, line = (2,linestyles[i]))
+		plot!(psolIG[2] ./1e6,Z .- psolIG[1], label= "Ideal Gas EOS, dT/dz = "* string(round(dTdZs[i] * 1000, digits=1)) *" K/km", color="blue", line = (2,linestyles[i]), legend=:topright)
+		ylabel!("z (m)")
+		xlabel!("p(z) (MPa)", legend=:bottomleft)
+		
+	end
+	plot!()
+end
+
+# ╔═╡ fe0e3bd1-a273-44d4-a536-dceda9e5edd0
+function readproperty(property, dir, timesteps)	
+		propertymatrix=[]
+		radii=[]
+		for t in 1:timesteps
+			file=("000" * string(t))[end-3:end]
+			curtime = CSV.read(dir*"_ptsuss_"*file*".csv", comment="#", DataFrame)
+			push!(radii, curtime.x)
+			push!(propertymatrix, curtime[!, property])
+		end
+		return hcat(propertymatrix...)
+end
+
+# ╔═╡ 79e6afee-5317-43de-ba3b-c23365cd22c0
+begin
+	singleTimeIdeal = CSV.read(IdealGasPath*"_ptsuss_0001.csv", comment="#", DataFrame)
+	singleTimeSpanWagner = CSV.read(SpanWagnerPath*"_ptsuss_0001.csv", comment="#", DataFrame)
+
+	pbhIdealGas=CSV.read("Reservoir_Ideal_Gas_pbh.csv", comment="#", DataFrame);
+	pbhSpanWagner=CSV.read("Reservoir_Span_Wagner_pbh.csv", comment="#", DataFrame);
+
+	radii = singleTimeIdeal.x
+	timesIdealGas = pbhIdealGas.time
+	timesSpanWagner = pbhSpanWagner.time
+end
+
+# ╔═╡ 99985eaa-93c9-4914-848a-817f33d71992
+begin
+	cdisp = (-.00005, .00046)
+	csgas= (0 , .8)
+	cp = (6.2, 7.6)
+	ct = (300, 301.4)
+end
+
+# ╔═╡ d77955d3-8a0a-443d-8e99-2493f8325fec
+heatmap(radii[3:end], timesIdealGas[2:end] , readproperty("disp_r", IdealGasPath, length(timesIdealGas)-1)[3:end, 1:end]', yscale=:log10, xscale=:log10, ylabel = "t (s)", xlabel = "r (m)", title= "Disp, Ideal Gas, pinf = 6.2 MPa",  left_margin = 13mm, right_margin = 10mm, clims = cdisp)
+
+# ╔═╡ 5f26e195-5680-4e66-bcbe-5f09039c3ef0
+heatmap(radii[3:end], timesIdealGas[2:end] , readproperty("sgas", IdealGasPath, length(timesIdealGas)-1)[3:end, 1:end]', yscale=:log10, xscale=:log10, ylabel = "t (s)", xlabel = "r (m)", title= "sgas, Ideal Gas, pinf = 6.2 MPa",  left_margin = 13mm, right_margin = 10mm, clims = csgas)
+
+# ╔═╡ 9e6ba040-3e03-49b4-b30e-603182f1b3e0
+heatmap(radii[3:end], timesIdealGas[2:end] , readproperty("pwater", IdealGasPath, length(timesIdealGas)-1)[3:end, 1:end]'./1e6, yscale=:log10, xscale=:log10, ylabel = "t (s)", xlabel = "r (m)", title= "p (MPa), Ideal Gas, pinf = 6.2MPa",  left_margin = 13mm, right_margin = 10mm, clims = cp)
+
+# ╔═╡ 2cf24dce-ad59-4b59-9946-fb2286982cee
+heatmap(radii[3:end], timesIdealGas[2:end] , readproperty("temp", IdealGasPath,  length(timesIdealGas)-1)[3:end, 1:end]', yscale=:log10, xscale=:log10, ylabel = "t (s)", xlabel = "r (m)", title= "Temp(K), Ideal Gas, pinf = 6.2 MPa",  left_margin = 13mm, right_margin = 10mm, clims = ct)
+
+# ╔═╡ 1f2326fa-5429-4be9-b392-e7a6f7319cd6
+heatmap(radii[3:end], timesSpanWagner[2:end] , readproperty("disp_r", SpanWagnerPath, length(timesSpanWagner)-1)[3:end, 1:end]', yscale=:log10, xscale=:log10, ylabel = "t (s)", xlabel = "r (m)", title= "Disp, Span-Wagner, pinf = 6.2 MPa",  left_margin = 13mm, right_margin = 10mm, clims = cdisp)
+
+# ╔═╡ b99ab05b-63db-45d0-bf82-69fd7925f639
+heatmap(radii[3:end], timesSpanWagner[2:end] , readproperty("sgas", SpanWagnerPath,  length(timesSpanWagner)-1)[3:end, 1:end]', yscale=:log10, xscale=:log10, ylabel = "t (s)", xlabel = "r (m)", title= "sgas, Span-Wagner,  pinf = 6.2 MPa",  left_margin = 13mm, right_margin = 10mm, clims = csgas)
+
+# ╔═╡ 775e0f1f-7a4c-42d5-9881-f31a79147b1b
+heatmap(radii[3:end], timesSpanWagner[2:end] , readproperty("pwater", SpanWagnerPath, length(timesSpanWagner)-1)[3:end, 1:end]'./1e6, yscale=:log10, xscale=:log10, ylabel = "t (s)", xlabel = "r (m)", title= "p(MPa), Span-Wagner,  pinf = 6.2 MPa",  left_margin = 13mm, right_margin = 10mm, clims = cp)
+
+# ╔═╡ ff242df4-45fe-4b99-9295-f07b0ad07208
+heatmap(radii[3:end], timesSpanWagner[2:end] , readproperty("temp", SpanWagnerPath,  length(timesSpanWagner)-1)[3:end, 1:end]', yscale=:log10, xscale=:log10, ylabel = "t (s)", xlabel = "r (m)", title= "Temp(K), Span-Wagner, pinf = 6.2 MPa",  left_margin = 13mm, right_margin = 10mm, clims = ct)
+
+# ╔═╡ 0d420ea7-c854-4842-b972-f09b65deb673
+begin
+	dTdz = -.016
+	T0 = T1 - dTdz * Z
+	Arock = 11 * .1 * 2 * π
+	Apipe = .1^2 * π
+	uρ = 1.991 * Arock / Apipe
+	rampup = 100
+
+	function u0pipesolIG(ρ1,u1)
 	
 	function ∂p_∂ρ(T, ρ)
 		# specific gas constant for CO₂ [J/(kg·K)]
@@ -338,11 +576,11 @@ function u0pipesolIG(ρ1,u1)
 	# Define the ODE system: du/dx = RHS
 	function du_dx!(du, u, p, x)
 	    ρ = ρ1 * u1 / u[1]
-	    T = T1 - Γ * x
+	    T = T1 - dTdz * x
 	    dpdrho = ∂p_∂ρ(T, ρ)
 	    dpdT = ∂p_∂T(T, ρ)
 	    factor = 1 - (dpdrho / u[1]^2)
-	    rhs = (-g / u[1]) +fric * u[1] - (1 / (ρ1 * u1)) * dpdT * (-Γ)
+	    rhs = (-g / u[1]) +fric * u[1] - (1 / (ρ1 * u1)) * dpdT * (-dTdz)
 	    du[1] = rhs / factor
 	end
            # Initial temperature [K]
@@ -356,8 +594,7 @@ function u0pipesolIG(ρ1,u1)
 	return sol(Z)[1]
 end
 
-# ╔═╡ c0011544-9db1-4118-81ea-3c7e7b6f9c60
-function u0pipesolSW(ρ1,u1)
+	function u0pipesolSW(ρ1,u1)
 	
 	function ∂p_∂ρ(T, ρ)
 		# specific gas constant for CO₂ [J/(kg·K)]
@@ -371,11 +608,11 @@ function u0pipesolSW(ρ1,u1)
 	# Define the ODE system: du/dx = RHS
 	function du_dx!(du, u, p, x)
 	    ρ = ρ1 * u1 / u[1]
-	    T = T1 - Γ * x
+	    T = T1 - dTdz * x
 	    dpdrho = ∂p_∂ρ(T, ρ)
 	    dpdT = ∂p_∂T(T, ρ)
 	    factor = 1 - (dpdrho / u[1]^2)
-	    rhs = (-g / u[1]) +fric * u[1] - (1 / (ρ1 * u1)) * dpdT * (-Γ)
+	    rhs = (-g / u[1]) +fric * u[1] - (1 / (ρ1 * u1)) * dpdT * (-dTdz)
 	    du[1] = rhs / factor
 	end
            # Initial temperature [K]
@@ -388,171 +625,158 @@ function u0pipesolSW(ρ1,u1)
 
 	return sol(Z)[1]
 end
+end
 
-# ╔═╡ 5b9cdf42-536d-40a1-a595-1bb5c6da0fc1
-
-
-# ╔═╡ dec0731a-7cdc-4532-b871-632fbc136378
+# ╔═╡ fce925ec-be64-4f87-8c44-ef56f07aae88
 begin
-uρtIG = [min(1, t/rampup) * uρ for t in pbhIG.time[2:end]]
-p1IG =  pbhIG.p_bh[2:end]
-ρ1IG =  p1IG / (m.r * T1)
-u1IG = uρ ./ρ1IG
-u0IG = [u0pipesolIG(el[1], el[2]) for el in zip(ρ1IG,u1IG)]
-ρ0IG = uρ ./u0IG
-p0IG = ρ0IG .* m.r * T0
+uρtIG2 = [min(1, t/rampup) * uρ for t in pbhIdealGas.time[2:end]]
+p1IG2 =  pbhIdealGas.p_bh[2:end]
+ρ1IG2 =  p1IG2 / (m.r * T1)
+u1IG2 = uρ ./ρ1IG2
+u0IG2 = [u0pipesolIG(el[1], el[2]) for el in zip(ρ1IG2,u1IG2)]
+ρ0IG2 = uρ ./u0IG2
+p0IG2 = ρ0IG2 .* m.r * T0
 	
-uρtSW = [min(1, t/rampup) * uρ for t in pbhSW.time[2:end]]
-p1SW = pbhSW.p_bh[2:end]
-ρ1SW = [maximum(swdenco2(p1, T1)) for p1 in p1SW]
-u1SW = uρ ./ρ1SW
-u0SW = [u0pipesolSW(el[1], el[2]) for el in zip(ρ1SW,u1SW)]
-ρ0SW = uρ ./u0SW
-p0SW = [swpco2(ρ0,T1) for ρ0 in ρ0SW]
+uρtSW2 = [min(1, t/rampup) * uρ for t in pbhSpanWagner.time[2:end]]
+p1SW2 = pbhSpanWagner.p_bh[2:end]
+ρ1SW2 = [maximum(swdenco2(p1, T1)) for p1 in p1SW2]
+u1SW2 = uρ ./ρ1SW2
+u0SW2 = [u0pipesolSW(el[1], el[2]) for el in zip(ρ1SW2,u1SW2)]
+ρ0SW2 = uρ ./u0SW2
+p0SW2 = [swpco2(ρ0,T1) for ρ0 in ρ0SW2]
 end
 
-# ╔═╡ fd87f76f-d36b-4901-997c-101b8e65e383
-@btime [u0pipesolIG(el[1], el[2]) for el in zip(ρ1IG,u1IG)]
-
-# ╔═╡ 15c2b791-0aec-4c04-8b0a-ea5e8fc97aff
-@btime [u0pipesolSW(el[1], el[2]) for el in zip(ρ1SW,u1SW)]
-
-# ╔═╡ ce4d20a9-cec7-42de-9d8b-178adbc23845
-uρtSW
-
-# ╔═╡ 23d5adf3-9ecb-4391-8b68-c4f7f8467508
-maximum(p1SW)
-
-# ╔═╡ ec3542e1-c927-42be-b8a5-85f723cdc935
+# ╔═╡ d5c19c39-00c1-4a61-a781-970dcb890599
 begin
-	plot(pbhIG.time[2:end],p0IG, xscale=:log10)
-	plot!(pbhIG.time[2:end],p1IG, xscale=:log10)
+	plot(pbhIdealGas.time[2:end],p1IG2./1e6, xscale=:log10, label = "Ideal Gas p1(t)")
+	plot!(pbhIdealGas.time[2:end],p0IG2./1e6, xscale=:log10, label = "Ideal Gas p0(t)")
+
+	plot!(pbhSpanWagner.time[2:end],p1SW2./1e6,color="orange", label = "Span-Wagner p1(t)")
+	plot!(pbhSpanWagner.time[2:end],p0SW2./1e6, xscale=:log10, label = "Span-Wagner p0(t)", title = "Required p0(t) and p1(t) with ramping up mass flux", xlabel = "time (s)", ylabel = "MPa")
 end
 
-# ╔═╡ a6a43f13-0870-411d-8a2f-b356d0815d8a
+# ╔═╡ 054aeb8e-7433-4a9d-aa21-9135fb49baa0
+p1
+
+# ╔═╡ a0f536ec-7147-4882-9ba3-823b6ef57e47
 begin
+u0s = .01:.01:8
+u0uzIG = []
+uzIG = []
+plot()
+	
+	for u₀ in u0s       # initial velocity [m/s]
+	ρ1 = ρ1IG
+	# Dummy EoS partial derivatives for testing
+	function ∂p_∂ρ(T, ρ)
+		# specific gas constant for CO₂ [J/(kg·K)]
+		return m.r * T
+	    #return swdpdρ(ρ, T, 0)
 	
 	
-	plot(pbhIG.time[2:end],p1IG./1e6, xscale=:log10, label = "Ideal Gas p1(t)")
-	plot!(pbhIG.time[2:end],p0IG./1e6, xscale=:log10, label = "Ideal Gas p0(t)")
-
-	plot!(pbhSW.time[2:end],p1SW./1e6,color="orange", label = "Span-Wagner p1(t)")
-	plot!(pbhSW.time[2:end],p0SW./1e6, xscale=:log10, label = "Span-Wagner p0(t)", title = "Required p0(t) and p1(t) with ramping up mass flux", xlabel = "time (s)", ylabel = "MPa")
+	end
+	
+	function ∂p_∂T(T, ρ)
+		return m.r * ρ
+	   # return swdpdT(ρ, T, 0)
+	end
+	
+	# Define the ODE system: du/dx = RHS
+	function du_dx!(du, u, p, x)
+		g=9.81
+	    ρ = ρ1 * u₀ / u[1]
+	    T = T1 - dTdz * x
+	    dpdrho = ∂p_∂ρ(T, ρ)
+	    dpdT = ∂p_∂T(T, ρ)
+	    factor = 1 - (dpdrho / u[1]^2)
+	    rhs = (-g / u[1]) +fric * u[1] - (1 / (ρ1 * u₀)) * dpdT * (-dTdz)
+	    du[1] = rhs / factor
+	end
+             # Initial temperature [K]
+	xspan = (0.0, Z)     # Spatial domain
+	u_init = [u₀]
+	
+	# Solve ODE
+	prob = ODEProblem(du_dx!, u_init, xspan)
+	sol = solve(prob, TRBDF2(), reltol=1e-8, abstol=1e-8)
+	# Plot
+	#plot(sol, xlabel="z", ylabel="u(z)", title="Velocity Profile")
+	#print(sol(500))
+	plot!(sol.t, [u₀/el[1] for el in sol.u], xlabel="z", ylabel="u1/u(z)", label="u₀="*string(u₀))
+	push!(u0uzIG,u₀/sol.u[end][1])
+	push!(uzIG, sol.u[end][1])
+	end
+	plot!()
 end
 
-# ╔═╡ bf490612-02d8-4b58-bb74-73d5b95ed07c
-ρ1IG
-
-# ╔═╡ 0230b57f-5306-45dc-a89d-2e901028b296
+# ╔═╡ 5c1b71d9-75d8-4f51-930f-d487487cc343
 begin
-	plot(pbhSW.time[2:end], p1SW)
-	plot!(pbhIG.time[2:end] , p1IG, xscale = :log10)
+u0uz = []
+uz = []
+ρ1 = ρ1SW
+plot()
+	
+	for u₀ in u0s       # initial velocity [m/s]
+	
+	# Dummy EoS partial derivatives for testing
+	function ∂p_∂ρ(T, ρ)
+		# specific gas constant for CO₂ [J/(kg·K)]
+		#return m.r * T
+	    return swdpdρ(ρ, T)
+	
+	
+	end
+	
+	function ∂p_∂T(T, ρ)
+	    #return m.r * ρ
+	    return swdpdT(ρ, T)
+	end
+	
+	# Define the ODE system: du/dx = RHS
+	function du_dx!(du, u, p, x)
+		g=9.81
+	    ρ = ρ1 * u₀ / u[1]
+	    T = T1 - dTdz * x
+	    dpdrho = ∂p_∂ρ(T, ρ)
+	    dpdT = ∂p_∂T(T, ρ)
+	    factor = 1 - (dpdrho / u[1]^2)
+	    rhs = (-g / u[1]) + fric * u[1] - (1 / (ρ1 * u₀)) * dpdT * (-dTdz)
+	    du[1] = rhs / factor
+	end
+             # Initial temperature [K]
+	xspan = (0.0, Z)     # Spatial domain
+	u_init = [u₀]
+	
+	# Solve ODE
+	prob = ODEProblem(du_dx!, u_init, xspan)
+	sol = solve(prob, TRBDF2(), reltol=1e-8, abstol=1e-8)
+	# Plot
+	#plot(sol, xlabel="z", ylabel="u(z)", title="Velocity Profile")
+	#print(sol(500))
+	plot!(sol.t, [u₀/el[1] for el in sol.u], xlabel="z", ylabel="u1/u(z)", label="u₀="*string(u₀))
+	push!(u0uz,u₀/sol.u[end][1])
+	push!(uz, sol.u[end][1])
+	end
+	plot!()
 end
 
-# ╔═╡ 52295a3c-8d25-43ca-82e8-5f41fe26f702
-
-
-# ╔═╡ 20aeff76-c687-4956-9003-786e7e41a877
-maximum(p1SW)
-
-# ╔═╡ c3e5ff92-ee51-4472-a432-7bc7c8f8233e
+# ╔═╡ 369f10c4-8837-42ee-b525-194da92d67f1
 begin
-	plot(ρ1SW)
-	plot!(ρ1IG)
+	ρ0s = ρ1SW .* u0uz
+	p0s = [swpco2(el, T0) for el in ρ0s]
 end
 
-# ╔═╡ a056e7d2-ab57-462c-a6ce-5ad9339b86fd
+# ╔═╡ ebcac7f7-a676-4516-833b-92f13585a134
 begin
-	plot(pbhSW.time[2:end], ρ1SW, label = "Span-Wagner")
-	plot!(pbhIG.time[2:end] , ρ1IG, xscale = :log10, label = "Ideal Gas", ylabel = "ρ1(kg/m^3)", xlabel = "time(s)")
+	plot(p0s  ./ 1e6, (ρ0s.*uz), xlabel = "p0 (Pa)", ylabel="Mass Flux (kg/s/m^2)", title="SW: Mass flux vs p0 at p1="*string(p1)*" (MPa)", label="SW")
+	plot!(ρ1IG .* u0uzIG * (T0*m.r) ./ 1e6, xlabel = "p0 (MPa)", ρ1IG .* u0uzIG .* uzIG, ylabel="Mass Flux (kg/s/m^2)", title="Mass flux vs p0 at p1="*string(p1/1e6)*" MPa", label="IG", ylims = (0,400), xlims = (5.6, 6.6))
+	vline!([5.7], label="Moeller p0 (5.7 MPa)")
+	
 end
-
-# ╔═╡ 9751c8fe-bac2-48a8-93bf-444d1700a785
-begin
-	plot(pbhSW.time[2:end], p1SW./ρ1SW, label = "Span-Wagner")
-	plot!(pbhIG.time[2:end] , p1IG./ρ1IG, xscale = :log10, label = "Ideal Gas", ylabel = "p1/ρ1", xlabel = "time(s)")
-end
-
-# ╔═╡ cd7de5ea-2e32-4d8e-89f4-50d6cbb3b243
-
-
-# ╔═╡ 1719b13b-87ce-4b54-92a0-910869f5d5e7
-function propheatmapSW(prop, timesteps; plotme=true)
-		
-		#plot(xlabel = "time", ylabel = "radius", yscale = :log10, right_margin = 10mm)
-		allgas=[]
-		radii=[]
-		for t in 1:timesteps
-			file=("000" * string(t))[end-3:end]
-			curtime = CSV.read("projects/bluefin/problems/Laforce/2D_SWFluid_csv_ptsuss_"*file*".csv", comment="#", DataFrame)
-			push!(radii, curtime.x)
-			push!(allgas, curtime[!, prop])
-
-		end
-		(allgas)
-		
-		allgas=hcat(allgas...)
-		if !(plotme)
-			return times,radii,allgas
-		end
-		#heatmap!(times[2:timesteps+1], radii[:], allgas[:,:], title = names * " " * prop)
-		
-		return allgas
-		
-
-end
-
-# ╔═╡ b4bf2262-7fe3-4a79-b8ea-c8d69ba7e17a
-function propheatmapIdeal(prop, timesteps; plotme=true)
-		
-		#plot(xlabel = "time", ylabel = "radius", yscale = :log10, right_margin = 10mm)
-		allgas=[]
-		radii=[]
-		for t in 1:timesteps
-			file=("000" * string(t))[end-3:end]
-			curtime = CSV.read("projects/bluefin//problems/Laforce/2D_IdealFluid_csv_ptsuss_"*file*".csv", comment="#", DataFrame)
-			push!(radii, curtime.x)
-			push!(allgas, curtime[!, prop])
-
-		end
-		(allgas)
-		
-		allgas=hcat(allgas...)
-		if !(plotme)
-			return times,radii,allgas
-		end
-		#heatmap!(times[2:timesteps+1], radii[:], allgas[:,:], title = names * " " * prop)
-		
-		return allgas
-		
-
-end
-
-# ╔═╡ c92bb425-d829-4a9f-96d7-274d90dfafd2
-begin
-	sgasideal=propheatmapIdeal("sgas", 202)
-	sgasSW = propheatmapSW("sgas", 185)
-
-	pwaterideal=propheatmapIdeal("pwater", 202)
-	pwaterSW = propheatmapSW("pwater", 185)
-
-	dpdzideal = (pwaterideal[2,:] - pwaterideal[1,:]) /(1.109090909 - 0.1)
-	dpdzSW = (pwaterSW[2,:] - pwaterSW[1,:]) /(1.109090909 - 0.1)
-end
-
-# ╔═╡ d6ee864d-601d-48ad-8a73-8aedbe791feb
-begin
-	plot(pbhSW.time[2:end], dpdzSW ./ 1e6, label = "Span-Wagner")
-	plot!(pbhIG.time[2:end] , dpdzideal ./ 1e6, xscale = :log10, label = "Ideal Gas", ylabel = "(dp/dr)1 (MPa / m)", xlabel = "time(s)")
-end
-
-# ╔═╡ ebab039a-71e8-4b58-9d84-6303c2c892d1
-m.r * 301
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
-BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
@@ -560,7 +784,6 @@ Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
 [compat]
-BenchmarkTools = "~1.5.0"
 CSV = "~0.10.15"
 DataFrames = "~1.7.0"
 DifferentialEquations = "~7.15.0"
@@ -574,7 +797,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.3"
 manifest_format = "2.0"
-project_hash = "22f0c66a4117931b768ee3401dcf89b2f1b71e18"
+project_hash = "c5caee11a0d2c52d743dad43fe3c256d8a302d9b"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "72af59f5b8f09faee36b4ec48e014a79210f2f4f"
@@ -701,12 +924,6 @@ weakdeps = ["SparseArrays"]
 
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
-
-[[deps.BenchmarkTools]]
-deps = ["JSON", "Logging", "Printf", "Profile", "Statistics", "UUIDs"]
-git-tree-sha1 = "f1dff6729bc61f4d49e140da1af55dcd1ac97b2f"
-uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
-version = "1.5.0"
 
 [[deps.BitFlags]]
 git-tree-sha1 = "0691e34b3bb8be9307330f88d1a3c3f25466c24d"
@@ -2352,10 +2569,6 @@ version = "2.4.0"
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
-[[deps.Profile]]
-deps = ["Printf"]
-uuid = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
-
 [[deps.PtrArrays]]
 git-tree-sha1 = "77a42d78b6a92df47ab37e177b2deac405e1c88f"
 uuid = "43287f4e-b6f4-7ad1-bb20-aadabca52c3d"
@@ -3268,38 +3481,35 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╠═dd191d6e-27b4-11f0-2350-33f8e64f08e2
-# ╠═ba838e3b-1fe6-493a-863f-39a28445644a
-# ╠═7e1f7738-c3aa-46d8-813a-9fc195d7e73d
-# ╠═8db7494c-7ca9-4c1d-84cb-42397063fed7
-# ╠═714d1819-4a27-4c57-a250-f1c74f11e3ca
-# ╠═63766868-19d2-4027-8e8e-ce2efd4099f7
-# ╠═da9b4fd3-e439-47f4-bce6-50a8404abea4
-# ╠═a0218a0d-bba3-4129-ae4d-669f10c782b8
-# ╠═b9e3cd2c-0650-40ed-a554-6fc2516e02f5
-# ╠═bcb43f1e-99bc-46e6-96f4-6cfbcb9ce651
-# ╠═c0011544-9db1-4118-81ea-3c7e7b6f9c60
-# ╠═5b9cdf42-536d-40a1-a595-1bb5c6da0fc1
-# ╠═dec0731a-7cdc-4532-b871-632fbc136378
-# ╠═6e3cd9fa-42ba-4620-9f77-f068799196f4
-# ╠═fd87f76f-d36b-4901-997c-101b8e65e383
-# ╠═15c2b791-0aec-4c04-8b0a-ea5e8fc97aff
-# ╠═ce4d20a9-cec7-42de-9d8b-178adbc23845
-# ╠═23d5adf3-9ecb-4391-8b68-c4f7f8467508
-# ╠═ec3542e1-c927-42be-b8a5-85f723cdc935
-# ╠═a6a43f13-0870-411d-8a2f-b356d0815d8a
-# ╠═bf490612-02d8-4b58-bb74-73d5b95ed07c
-# ╠═0230b57f-5306-45dc-a89d-2e901028b296
-# ╠═52295a3c-8d25-43ca-82e8-5f41fe26f702
-# ╠═20aeff76-c687-4956-9003-786e7e41a877
-# ╠═c3e5ff92-ee51-4472-a432-7bc7c8f8233e
-# ╠═a056e7d2-ab57-462c-a6ce-5ad9339b86fd
-# ╠═9751c8fe-bac2-48a8-93bf-444d1700a785
-# ╠═c92bb425-d829-4a9f-96d7-274d90dfafd2
-# ╠═d6ee864d-601d-48ad-8a73-8aedbe791feb
-# ╠═cd7de5ea-2e32-4d8e-89f4-50d6cbb3b243
-# ╠═1719b13b-87ce-4b54-92a0-910869f5d5e7
-# ╠═b4bf2262-7fe3-4a79-b8ea-c8d69ba7e17a
-# ╠═ebab039a-71e8-4b58-9d84-6303c2c892d1
+# ╠═7be6a36c-5cd0-11f0-377c-0546efed357e
+# ╠═2421e224-f9f5-42a2-9491-3c651449b0c7
+# ╠═3436a157-bd4e-473b-bbde-87715291c684
+# ╠═3b6b46c5-7e77-43f7-88c8-c92d0e3e920c
+# ╠═641a89ee-8d31-4050-9cf8-813f5b5f3202
+# ╠═53ea2768-9099-4945-99b0-4a3de705e317
+# ╠═ae8b7bf3-fad3-44bd-9ecd-c835cb7a07dd
+# ╠═f1b18030-29c5-4dc4-841c-48b23685f69d
+# ╠═163a3038-ac4c-45d7-878b-58c43f778a92
+# ╠═0412f2e1-e7f4-4e7b-a1b4-a0b1dbe1aaf4
+# ╠═60d7a90d-834d-4ce2-b198-f0c8055c1496
+# ╠═fe0e3bd1-a273-44d4-a536-dceda9e5edd0
+# ╠═79e6afee-5317-43de-ba3b-c23365cd22c0
+# ╠═99985eaa-93c9-4914-848a-817f33d71992
+# ╠═d77955d3-8a0a-443d-8e99-2493f8325fec
+# ╠═5f26e195-5680-4e66-bcbe-5f09039c3ef0
+# ╠═9e6ba040-3e03-49b4-b30e-603182f1b3e0
+# ╠═2cf24dce-ad59-4b59-9946-fb2286982cee
+# ╠═1f2326fa-5429-4be9-b392-e7a6f7319cd6
+# ╠═b99ab05b-63db-45d0-bf82-69fd7925f639
+# ╠═775e0f1f-7a4c-42d5-9881-f31a79147b1b
+# ╠═ff242df4-45fe-4b99-9295-f07b0ad07208
+# ╠═0d420ea7-c854-4842-b972-f09b65deb673
+# ╠═fce925ec-be64-4f87-8c44-ef56f07aae88
+# ╠═d5c19c39-00c1-4a61-a781-970dcb890599
+# ╠═054aeb8e-7433-4a9d-aa21-9135fb49baa0
+# ╠═a0f536ec-7147-4882-9ba3-823b6ef57e47
+# ╠═5c1b71d9-75d8-4f51-930f-d487487cc343
+# ╠═369f10c4-8837-42ee-b525-194da92d67f1
+# ╠═ebcac7f7-a676-4516-833b-92f13585a134
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
